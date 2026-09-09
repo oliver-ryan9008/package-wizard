@@ -2,7 +2,7 @@ FROM node:24.20.0
 
 USER 1000:1000
 
-ENV codedir /tmp/app
+ENV codedir=/tmp/app
 
 WORKDIR ${codedir}
 
