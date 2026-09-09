@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/renovate-auto-update/schemas/update-result.schema.json",
+  "title": "Renovate Auto Update result",
+  "type": "object",
+  "required": [
+    "packageJsonPath",
+    "updated",
+    "skipped",
+    "renovateExcluded",
+    "releaseAgeWarnings",
+    "releaseAgeErrors",
+    "minimumReleaseAge"
+  ],
+  "properties": {
+    "packageJsonPath": { "type": "string", "minLength": 1 },
+    "updated": { "$ref": "#/$defs/packageChanges" },
+    "skipped": { "$ref": "#/$defs/skipInfo" },
+    "renovateExcluded": { "$ref": "#/$defs/skipInfo" },
+    "releaseAgeWarnings": { "$ref": "#/$defs/skipInfo" },
+    "releaseAgeErrors": { "$ref": "#/$defs/skipInfo" },
+    "minimumReleaseAge": {
+      "anyOf": [{ "type": "string" }, { "type": "number" }, { "const": false }]
+    }
+  },
+  "$defs": {
+    "packageChanges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["section", "name", "from", "to"],
+        "properties": {
+          "section": { "enum": ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"] },
+          "name": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "skipInfo": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["section", "name", "reason"],
+        "properties": {
+          "section": { "enum": ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"] },
+          "name": { "type": "string" },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

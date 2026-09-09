@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <rect width="1440" height="900" fill="#000000"/>
+  <rect x="60" y="48" width="1320" height="804" fill="#000000" stroke="#000000" stroke-width="2"/>
+  <rect x="60" y="48" width="1320" height="52" fill="#000000"/>
+  <circle cx="94" cy="74" r="8" fill="#000000"/><circle cx="122" cy="74" r="8" fill="#000000"/><circle cx="150" cy="74" r="8" fill="#000000"/>
+  <text x="190" y="81" fill="#000000" font-family="Menlo, Monaco, monospace" font-size="20">renovate-auto-update audit</text>
+  <g font-family="Menlo, Monaco, monospace">
+    <text x="110" y="154" fill="#F8F8F2" font-size="31" font-weight="700">Renovate Auto Update v1.6.1</text>
+    <text x="110" y="196" fill="#F8F8F2" font-size="20">Target: ~/work/api/package.json</text>
+    <text x="110" y="235" fill="#00FFE5" font-size="20">Review security vulnerabilities  |  Preview: no files will change</text>
+    <line x1="110" y1="266" x2="1330" y2="266" stroke="#1B1B1B"/>
+    <text x="110" y="315" fill="#00FFE5" font-size="24" font-weight="700">Audit complete: 2 vulnerabilities, 1 fix ready for review.</text>
+    <text x="110" y="364" fill="#FF0900" font-size="22" font-weight="700">1 high-severity vulnerability needs attention.</text>
+    <rect x="110" y="395" width="1220" height="115" rx="6" fill="#000000" stroke="#CF0B00"/>
+    <text x="140" y="434" fill="#FF0900" font-size="21" font-weight="700">[HIGH] brace-expansion (indirect)</text>
+    <text x="140" y="471" fill="#F8F8F2" font-size="18">DoS via exponential time complexity. Vulnerable range: &lt;=1.1.11</text>
+    <text x="140" y="497" fill="#626262" font-size="17">Fix: 2.0.1  ·  Dependency chain: api → build-tool → brace-expansion</text>
+    <rect x="110" y="535" width="1220" height="115" rx="6" fill="#000000" stroke="#CF0B00"/>
+    <text x="140" y="574" fill="#FF0900" font-size="21" font-weight="700">[MODERATE] js-yaml (direct)</text>
+    <text x="140" y="611" fill="#F8F8F2" font-size="18">Prototype pollution. Vulnerable range: &lt;3.14.1</text>
+    <text x="140" y="637" fill="#626262" font-size="17">Fix: unavailable</text>
+    <text x="110" y="706" fill="#00FFE5" font-size="21">Planned fixes (1)</text>
+    <text x="140" y="744" fill="#F8F8F2" font-size="20">brace-expansion</text><text x="425" y="744" fill="#F8F8F2" font-size="20">1.1.11  →  2.0.1   (override)</text>
+    <text x="110" y="810" fill="#44ff00" font-size="21">[OK] Preview complete. package.json was not modified.</text>
+  </g>
+</svg>

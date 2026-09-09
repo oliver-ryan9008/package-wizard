@@ -1,0 +1,72 @@
+# renovate-auto-update
+
+`renovate-auto-update` is an npm library and CLI for previewing, reviewing, and applying dependency maintenance. It respects your project's `renovate.json` configuration, so disabled packages are never touched. Every change-capable command previews first; `--apply` is required to write `package.json`.
+
+## Install
+
+To run without installing it to `package.json`, just run:
+
+```bash
+npx renovate-auto-update@latest update
+```
+
+For use within another project's dependencies, see [using as a project dependency](docs/usage.md).
+
+## Guided terminal experience
+
+Running `renovate-auto-update` without arguments opens an interactive [Clack](https://github.com/bombshell-dev/clack) flow. It shows the selected target project, then guides users through update scope, audit severity, policy checks, pinning, exclusions, and target selection. Interactive mode requires a TTY; use an explicit command in scripts and CI.
+
+![Guided task selection with preview-first default](demo/menu.png)
+
+The default task is a preview. After results are shown, interactive mode offers an explicit **Apply changes** confirmation. Direct commands require `--apply` to write.
+
+![Guided preview, skipped-reason details, and audit review](demo/dry-run-demo.gif)
+
+```bash
+renovate-auto-update update
+renovate-auto-update audit
+renovate-auto-update check
+renovate-auto-update pin --no-update
+renovate-auto-update update --level major --apply
+```
+
+## Terminal ergonomics
+
+Use `--help` for concise command-specific help, `--verbose` for every skipped-package reason, and `--color auto|always|never` or `--no-color` for display control. `--json` writes one machine-readable result to stdout.
+
+Shell completion scripts are available for bash, zsh, and fish:
+
+```bash
+renovate-auto-update completion zsh
+renovate-auto-update completion bash
+renovate-auto-update completion fish
+```
+
+For explanations of package behavior, update policies, audit handling, and
+`renovate.json` configuration, see the [package overview](docs/package-overview.md).
+
+For installation in another project's dependencies, scripts, direct CLI usage, or library usage, see [using as a project dependency](docs/usage.md).
+
+## Contributing
+
+Install dependencies, make your changes, and run the full validation suite:
+
+```bash
+npm install
+npm run test
+npm run build
+```
+
+Open a merge request with focused changes and tests where appropriate. Use
+[Conventional Commits](https://www.conventionalcommits.org/) for commit
+messages, for example:
+
+```text
+feat: add dependency update policy
+fix: handle missing package metadata
+docs: clarify interactive menu usage
+```
+
+Releases use semantic release. Merging Conventional Commits to the release
+branch determines the next version, changelog, and Git tag automatically; do
+not edit the package version manually for normal changes.

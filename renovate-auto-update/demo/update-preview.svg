@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+  <rect width="1440" height="900" fill="#000000"/>
+  <rect x="60" y="48" width="1320" height="804" fill="#000000" stroke="#000000" stroke-width="2"/>
+  <rect x="60" y="48" width="1320" height="52" fill="#000000"/>
+  <circle cx="94" cy="74" r="8" fill="#000000"/><circle cx="122" cy="74" r="8" fill="#000000"/><circle cx="150" cy="74" r="8" fill="#000000"/>
+  <text x="190" y="81" fill="#000000" font-family="Menlo, Monaco, monospace" font-size="20">renovate-auto-update update</text>
+  <g font-family="Menlo, Monaco, monospace">
+    <text x="110" y="154" fill="#F8F8F2" font-size="31" font-weight="700">Renovate Auto Update v1.6.1</text>
+    <text x="110" y="196" fill="#F8F8F2" font-size="20">Target: ~/work/api/package.json</text>
+    <text x="110" y="235" fill="#00FFE5" font-size="20">Preview dependency updates  |  Preview: no files will change</text>
+    <line x1="110" y1="266" x2="1330" y2="266" stroke="#25352a"/>
+    <text x="110" y="314" fill="#00FFE5" font-size="24" font-weight="700">Scan complete: 2 changes, 2 packages skipped.</text>
+    <text x="110" y="365" fill="#00FFE5" font-size="21">Production dependencies (1)</text>
+    <text x="140" y="403" fill="#F8F8F2" font-size="20">react</text><text x="390" y="403" fill="#F8F8F2" font-size="20">^18.2.0  →  ^18.3.1   (minor)</text>
+    <text x="110" y="458" fill="#00FFE5" font-size="21">Development dependencies (1)</text>
+    <text x="140" y="496" fill="#F8F8F2" font-size="20">typescript</text><text x="390" y="496" fill="#F8F8F2" font-size="20">^5.5.4  →  ^5.6.3   (minor)</text>
+    <line x1="110" y1="530" x2="1330" y2="530" stroke="#1B1B1B"/>
+    <text x="110" y="578" fill="#fff200" font-size="22" font-weight="700">Skipped packages (2)</text>
+    <text x="140" y="616" fill="#F8F8F2" font-size="20">dependencies legacy-sdk</text><text x="540" y="616" fill="#F8F8F2" font-size="20">Skipped via --skip</text>
+    <text x="140" y="654" fill="#F8F8F2" font-size="20">dependencies stable-lib</text><text x="540" y="654" fill="#F8F8F2" font-size="20">Available version is younger than minimum release age.</text>
+    <text x="110" y="711" fill="#44ff00" font-size="21">[OK] Preview complete. package.json was not modified.</text>
+    <text x="110" y="765" fill="#F8F8F2" font-size="23" font-weight="700">2 changes ready for update</text>
+    <rect x="104" y="782" width="575" height="48" rx="5" fill="#000000"/>
+    <text x="126" y="814" fill="#44ff00" font-size="21">●</text><text x="166" y="814" fill="#F8F8F2" font-size="20" font-weight="700">Keep preview (Default)</text><text x="430" y="814" fill="#626262" font-size="16">No files change.</text>
+    <text x="710" y="814" fill="#F8F8F2" font-size="19">Apply changes</text><text x="935" y="814" fill="#F8F8F2" font-size="19">Show skipped reasons</text><text x="1190" y="814" fill="#F8F8F2" font-size="19">← Go back</text>
+  </g>
+</svg>

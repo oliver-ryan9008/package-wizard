@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/renovate-auto-update/schemas/audit-result.schema.json",
+  "title": "Renovate Auto Update audit result",
+  "type": "object",
+  "required": ["packageJsonPath", "vulnerabilities", "fixed", "skipped"],
+  "properties": {
+    "packageJsonPath": { "type": "string", "minLength": 1 },
+    "vulnerabilities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/vulnerability" }
+    },
+    "fixed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "from", "to", "method"],
+        "properties": {
+          "name": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "method": { "enum": ["direct", "override"] },
+          "section": { "enum": ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "reason"],
+        "properties": {
+          "name": { "type": "string" },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "$defs": {
+    "vulnerability": {
+      "type": "object",
+      "required": ["name", "severity", "isDirect", "range", "titles", "fixAvailable"],
+      "properties": {
+        "name": { "type": "string" },
+        "severity": { "enum": ["critical", "high", "moderate", "low", "info"] },
+        "isDirect": { "type": "boolean" },
+        "range": { "type": "string" },
+        "titles": { "type": "array", "items": { "type": "string" } },
+        "fixAvailable": {
+          "anyOf": [
+            { "const": false },
+            {
+              "type": "object",
+              "required": ["version", "isSemVerMajor"],
+              "properties": {
+                "name": { "type": "string" },
+                "version": { "type": "string" },
+                "isSemVerMajor": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "dependencyChain": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
