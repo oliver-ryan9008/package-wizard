@@ -7,6 +7,7 @@ import {
 import { CliCommand } from "./types"
 import { aboutHelp, generalHelpBanner } from "./logging-utils/help-options"
 import { generalLogger, infoLogger } from "./logging-utils/logger"
+import path from "node:path"
 
 jest.mock("@clack/prompts", () => ({
   cancel: jest.fn(),
@@ -165,7 +166,7 @@ describe("cli-menu", () => {
       "--level",
       "minor",
       "--cwd",
-      "/projects/example"
+      path.dirname(path.resolve("/projects/example/package.json"))
     ])
 
     const textOptions = mockedText.mock.calls[0]?.[0]

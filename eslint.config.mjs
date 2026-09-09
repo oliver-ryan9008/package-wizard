@@ -1,7 +1,6 @@
 import js from "@eslint/js"
 import tseslint from "typescript-eslint"
 import jestPlugin from "eslint-plugin-jest"
-import prettierPluginRecommended from "eslint-plugin-prettier/recommended"
 
 const rules = {
   "@typescript-eslint/no-unused-vars": [
@@ -36,6 +35,5 @@ export default tseslint.config(
       "jest/no-focused-tests": "error"
     }
   },
-  prettierPluginRecommended,
   { rules }
 )

@@ -1,9 +1,11 @@
 {
   "name": "renovate-auto-update",
-  "version": "2.0.1",
+  "version": "1.0.0",
+  "author": "Ryan Oliver <oliver.ryan9008@gmail.com",
   "description": "CLI and library to update package.json dependencies to latest major, minor, or patch versions",
   "engines": {
-    "node": ">=22"
+    "node": ">=22",
+    "npm": ">=10"
   },
   "type": "module",
   "main": "./dist/index.mjs",
@@ -34,13 +36,19 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "NODE_ENV=test npm run lint && npm run check-types && jest"
+    "test": "npm run lint && npm run check-types && jest"
   },
   "keywords": [
     "npm",
     "cli",
     "dependencies",
-    "updater"
+    "updater",
+    "package.json",
+    "update",
+    "upgrade",
+    "versions",
+    "audit",
+    "modernize"
   ],
   "license": "MIT",
   "dependencies": {
@@ -70,8 +78,5 @@
   "jestSonar": {
     "reportPath": "./coverage",
     "reportFile": "sonar-unit-report.xml"
-  },
-  "publishConfig": {
-    "registry": "https://artifactory.nml.com/artifactory/api/npm/npm/"
   }
 }
