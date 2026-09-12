@@ -14,17 +14,14 @@ const config: Config = {
     "!src/**/*.spec.{ts,js}",
     "!src/**/*.d.ts"
   ],
-  reporters: [
-    "default",
-    [
-      "jest-sonar",
-      {
-        outputDirectory: "coverage",
-        outputName: "sonar-unit-report.xml",
-        reportedFilePath: "relative"
-      }
-    ]
-  ],
+  coverageThreshold: {
+    global: {
+      branches: 70,
+      functions: 80,
+      lines: 80,
+      statements: 80
+    }
+  },
   coverageReporters: ["json", "text", "lcov"],
   moduleNameMapper: {
     "^@clack/core$": "<rootDir>/__mocks__/clack-core.ts",

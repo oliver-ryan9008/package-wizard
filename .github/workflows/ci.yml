@@ -71,6 +71,13 @@ jobs:
       - name: Run Jest tests
         run: npx jest --runInBand --ci
 
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: coverage-report
+          path: coverage/lcov-report
+
   build:
     name: Package build
     needs: [lint, typecheck, test]
