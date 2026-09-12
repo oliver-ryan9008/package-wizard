@@ -61,7 +61,7 @@ describe("cli-menu", () => {
       process.cwd()
     ])
 
-    expect(mockedIntro).toHaveBeenCalledWith("Renovate Auto Update")
+    expect(mockedIntro).toHaveBeenCalledWith("Package Wizard")
     expect(mockedSelect).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({

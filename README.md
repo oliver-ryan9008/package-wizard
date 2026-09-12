@@ -1,33 +1,33 @@
-# renovate-auto-update
+# package-wizard
 
-`renovate-auto-update` is an npm library and CLI for previewing, reviewing, and applying dependency maintenance. It respects your project's `renovate.json` configuration, so disabled packages are never touched. Every change-capable command previews first; `--apply` is required to write `package.json`.
+`package-wizard` is an npm library and CLI for previewing, reviewing, and applying dependency maintenance. It respects your project's `renovate.json` configuration, so disabled packages are never touched. Every change-capable command previews first; `--apply` is required to write `package.json`.
 
 ## Install
 
 To run without installing it to `package.json`, just run:
 
 ```bash
-npx renovate-auto-update@latest update
+npx package-wizard@latest update
 ```
 
-For use within another project's dependencies, see [using as a project dependency](docs/usage.md).
+For use within another project's dependencies, see [using as a project dependency](https://github.com/oliver-ryan9008/package-wizard/blob/main/docs/usage.md).
 
 ## Guided terminal experience
 
-Running `renovate-auto-update` without arguments opens an interactive [Clack](https://github.com/bombshell-dev/clack) flow. It shows the selected target project, then guides users through update scope, audit severity, policy checks, pinning, exclusions, and target selection. Interactive mode requires a TTY; use an explicit command in scripts and CI.
+Running `package-wizard` without arguments opens an interactive [Clack](https://github.com/bombshell-dev/clack) flow. It shows the selected target project, then guides users through update scope, audit severity, policy checks, pinning, exclusions, and target selection. Interactive mode requires a TTY; use an explicit command in scripts and CI.
 
-![Guided task selection with preview-first default](demo/menu.png)
+![Guided task selection with preview-first default](https://github.com/oliver-ryan9008/package-wizard/raw/main/demo/menu.png)
 
 The default task is a preview. After results are shown, interactive mode offers an explicit **Apply changes** confirmation. Direct commands require `--apply` to write.
 
-![Guided preview, skipped-reason details, and audit review](demo/dry-run-demo.gif)
+![Guided preview, skipped-reason details, and audit review](https://github.com/oliver-ryan9008/package-wizard/raw/main/demo/dry-run-demo.gif)
 
 ```bash
-renovate-auto-update update
-renovate-auto-update audit
-renovate-auto-update check
-renovate-auto-update pin --no-update
-renovate-auto-update update --level major --apply
+package-wizard update
+package-wizard audit
+package-wizard check
+package-wizard pin --no-update
+package-wizard update --level major --apply
 ```
 
 ## Terminal ergonomics
@@ -37,15 +37,15 @@ Use `--help` for concise command-specific help, `--verbose` for every skipped-pa
 Shell completion scripts are available for bash, zsh, and fish:
 
 ```bash
-renovate-auto-update completion zsh
-renovate-auto-update completion bash
-renovate-auto-update completion fish
+package-wizard completion zsh
+package-wizard completion bash
+package-wizard completion fish
 ```
 
 For explanations of package behavior, update policies, audit handling, and
-`renovate.json` configuration, see the [package overview](docs/package-overview.md).
+`renovate.json` configuration, see the [package overview](https://github.com/oliver-ryan9008/package-wizard/blob/main/docs/package-overview.md).
 
-For installation in another project's dependencies, scripts, direct CLI usage, or library usage, see [using as a project dependency](docs/usage.md).
+For installation in another project's dependencies, scripts, direct CLI usage, or library usage, see [using as a project dependency](https://github.com/oliver-ryan9008/package-wizard/blob/main/docs/usage.md).
 
 ## Contributing
 

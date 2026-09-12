@@ -1,6 +1,6 @@
 # JSON schemas
 
-These schemas describe contracts emitted or consumed by `renovate-auto-update`.
+These schemas describe contracts emitted or consumed by `package-wizard`.
 
 - `update-result.schema.json`: default update and dry-run output.
 - `audit-result.schema.json`: audit and vulnerability-fix output.

@@ -1,5 +1,5 @@
 export const logTiming = (operation: string, startedAt: number): void => {
-  if (process.env.RENOVATE_AUTO_UPDATE_TIMINGS !== "1") {
+  if (process.env.PACKAGE_WIZARD_TIMINGS !== "1") {
     return
   }
 

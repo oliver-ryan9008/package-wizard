@@ -151,7 +151,7 @@ describe("cli-ui", () => {
     printShellCompletion("zsh")
 
     expect(stdoutSpy).toHaveBeenCalledWith(
-      expect.stringContaining("#compdef renovate-auto-update")
+      expect.stringContaining("#compdef package-wizard")
     )
     expect(mockedSuccessLogger).not.toHaveBeenCalled()
     expect(() => printShellCompletion("powershell")).toThrow(

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/renovate-auto-update/schemas/mandatory-result.schema.json",
-  "title": "Renovate Auto Update mandatory-check result",
+  "$id": "https://github.com/oliver-ryan9008/package-wizard/schemas/mandatory-result.schema.json",
+  "title": "Package Wizard mandatory-check result",
   "type": "object",
   "required": ["message", "hasMandatoryUpdates"],
   "properties": {

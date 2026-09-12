@@ -48,7 +48,7 @@ export const printHelp = (command?: CliCommand): void => {
     command !== CliCommand.Completion
   ) {
     const definition = getCommandDefinition(command)
-    successLogger("Renovate Auto Update")
+    successLogger("Package Wizard")
     generalLogger("")
     infoLogger(`Usage: ${definition.usage}`)
     generalLogger(`  ${definition.description}`)
@@ -67,10 +67,10 @@ export const printHelp = (command?: CliCommand): void => {
     return
   }
 
-  successLogger("Renovate Auto Update")
+  successLogger("Package Wizard")
   generalLogger("  Preview dependency maintenance. Apply only after review.")
   generalLogger("")
-  infoLogger("Usage: renovate-auto-update <command> [options]")
+  infoLogger("Usage: package-wizard <command> [options]")
   generalLogger("  Run without a command to use guided interactive mode.")
 
   printSection("Commands")
@@ -92,10 +92,10 @@ export const printHelp = (command?: CliCommand): void => {
   printSection("Quick start")
   generalLogger(
     [
-      "  renovate-auto-update update",
-      "  renovate-auto-update audit",
-      "  renovate-auto-update check",
-      "  renovate-auto-update update --apply"
+      "  package-wizard update",
+      "  package-wizard audit",
+      "  package-wizard check",
+      "  package-wizard update --apply"
     ].join("\n")
   )
 
@@ -106,7 +106,7 @@ export const printHelp = (command?: CliCommand): void => {
 }
 
 export const aboutHelp = (): void => {
-  successLogger("Renovate Auto Update")
+  successLogger("Package Wizard")
   generalLogger("")
   generalLogger(
     "  Preview dependency updates, audit fixes, and maintenance policy checks."
@@ -115,7 +115,7 @@ export const aboutHelp = (): void => {
     "  Renovate rules are read from renovate.json before any change is considered."
   )
   generalLogger("")
-  infoLogger("Use renovate-auto-update --help for commands and examples.")
+  infoLogger("Use package-wizard --help for commands and examples.")
 }
 
 export const generalHelpBanner = (): void => {

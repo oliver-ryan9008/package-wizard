@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/renovate-auto-update/schemas/renovate-config.schema.json",
-  "title": "Renovate Auto Update supported Renovate configuration",
+  "$id": "https://github.com/oliver-ryan9008/package-wizard/schemas/renovate-config.schema.json",
+  "title": "Package Wizard supported Renovate configuration",
   "type": "object",
   "properties": {
     "$schema": { "type": "string" },

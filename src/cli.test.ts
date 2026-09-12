@@ -574,7 +574,7 @@ describe("cli", () => {
       await expect(run(dependencies)).resolves.toBeInstanceOf(Error)
 
       expect(mockedErrorLogger).toHaveBeenCalledWith(
-        "Run renovate-auto-update --help for usage."
+        "Run package-wizard --help for usage."
       )
       expect(mockedErrorBanner).toHaveBeenCalled()
       expect(process.exitCode).toBe(1)

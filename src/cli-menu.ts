@@ -469,7 +469,7 @@ export const promptForCommand = async (): Promise<string[] | null> => {
     )
   }
 
-  intro("Renovate Auto Update")
+  intro("Package Wizard")
 
   while (true) {
     infoLogger(`Target: ${displayTargetPath(targetDirectory)}`)

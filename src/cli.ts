@@ -564,7 +564,7 @@ const reportCliError = (message: string, json: boolean): Error => {
   }
 
   errorLogger(`Error: ${message}`)
-  errorLogger("Run renovate-auto-update --help for usage.")
+  errorLogger("Run package-wizard --help for usage.")
   errorBanner()
   return new Error(message)
 }

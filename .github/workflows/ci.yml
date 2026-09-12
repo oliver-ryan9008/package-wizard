@@ -107,5 +107,5 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          tags: renovate-auto-update:ci
+          tags: package-wizard:ci
           load: true

@@ -50,9 +50,9 @@ describe("help-options", () => {
   it("renders short generated general help", () => {
     printHelp()
 
-    expect(mockedSuccessLogger).toHaveBeenCalledWith("Renovate Auto Update")
+    expect(mockedSuccessLogger).toHaveBeenCalledWith("Package Wizard")
     expect(mockedInfoLogger).toHaveBeenCalledWith(
-      "Usage: renovate-auto-update <command> [options]"
+      "Usage: package-wizard <command> [options]"
     )
     expect(mockedFormatColumns).toHaveBeenCalledTimes(2)
     expect(mockedGeneralLogger).toHaveBeenCalledWith(
@@ -64,7 +64,7 @@ describe("help-options", () => {
     printHelp(CliCommand.Audit)
 
     expect(mockedInfoLogger).toHaveBeenCalledWith(
-      "Usage: renovate-auto-update audit [options]"
+      "Usage: package-wizard audit [options]"
     )
     expect(mockedFormatColumns).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -85,7 +85,7 @@ describe("help-options", () => {
       "  Preview dependency updates, audit fixes, and maintenance policy checks."
     )
     expect(mockedInfoLogger).toHaveBeenCalledWith(
-      "Use renovate-auto-update --help for commands and examples."
+      "Use package-wizard --help for commands and examples."
     )
   })
 
@@ -94,6 +94,6 @@ describe("help-options", () => {
     expect(mockedSuccessLogger).not.toHaveBeenCalled()
 
     expect(checkForHelpOptions({ ...baseOptions, help: true })).toBe(true)
-    expect(mockedSuccessLogger).toHaveBeenCalledWith("Renovate Auto Update")
+    expect(mockedSuccessLogger).toHaveBeenCalledWith("Package Wizard")
   })
 })

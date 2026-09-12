@@ -1,6 +1,6 @@
-# renovate-auto-update, in plain English
+# package-wizard, in plain English
 
-`renovate-auto-update` is a small npm tool for keeping a project's dependencies current.
+`package-wizard` is a small npm tool for keeping a project's dependencies current.
 
 It can be used as either:
 

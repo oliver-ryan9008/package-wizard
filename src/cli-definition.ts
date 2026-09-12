@@ -20,61 +20,61 @@ export const COMMAND_DEFINITIONS: readonly CliCommandDefinition[] = [
     command: CliCommand.Update,
     label: "Preview dependency updates",
     description: "Find eligible dependency updates without changing files.",
-    usage: "renovate-auto-update update [options]",
+    usage: "package-wizard update [options]",
     supportsApply: true,
     examples: [
-      "renovate-auto-update update",
-      "renovate-auto-update update --level patch --apply"
+      "package-wizard update",
+      "package-wizard update --level patch --apply"
     ]
   },
   {
     command: CliCommand.Audit,
     label: "Review security vulnerabilities",
     description: "Review npm audit fixes without changing files.",
-    usage: "renovate-auto-update audit [options]",
+    usage: "package-wizard audit [options]",
     supportsApply: true,
     examples: [
-      "renovate-auto-update audit",
-      "renovate-auto-update audit --min-severity moderate --apply"
+      "package-wizard audit",
+      "package-wizard audit --min-severity moderate --apply"
     ]
   },
   {
     command: CliCommand.Check,
     label: "Check maintenance policy",
     description: "Fail with exit code 2 when required maintenance is found.",
-    usage: "renovate-auto-update check [options]",
+    usage: "package-wizard check [options]",
     supportsApply: false,
     examples: [
-      "renovate-auto-update check",
-      "renovate-auto-update check --level major --min-severity high"
+      "package-wizard check",
+      "package-wizard check --level major --min-severity high"
     ]
   },
   {
     command: CliCommand.Pin,
     label: "Preview pinned versions",
     description: "Preview exact dependency versions without changing files.",
-    usage: "renovate-auto-update pin [options]",
+    usage: "package-wizard pin [options]",
     supportsApply: true,
     examples: [
-      "renovate-auto-update pin --no-update",
-      "renovate-auto-update pin --apply"
+      "package-wizard pin --no-update",
+      "package-wizard pin --apply"
     ]
   },
   {
     command: CliCommand.About,
     label: "About",
     description: "Show tool purpose and compatibility details.",
-    usage: "renovate-auto-update about",
+    usage: "package-wizard about",
     supportsApply: false,
-    examples: ["renovate-auto-update about"]
+    examples: ["package-wizard about"]
   },
   {
     command: CliCommand.Completion,
     label: "Shell completion",
     description: "Print completion script for bash, zsh, or fish.",
-    usage: "renovate-auto-update completion <shell>",
+    usage: "package-wizard completion <shell>",
     supportsApply: false,
-    examples: ["renovate-auto-update completion zsh"]
+    examples: ["package-wizard completion zsh"]
   }
 ]
 

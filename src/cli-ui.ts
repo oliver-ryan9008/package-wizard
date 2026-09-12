@@ -160,7 +160,7 @@ export const printOperationHeader = (
   options: CliOptions
 ): void => {
   const definition = getCommandDefinition(command)
-  successLogger(`Renovate Auto Update v${version}`)
+  successLogger(`Package Wizard v${version}`)
   infoLogger(`Target: ${displayTargetPath(options.cwd)}`)
 
   const mode = definition.supportsApply
@@ -351,17 +351,17 @@ export const printMandatoryCheckResult = (
 
 const completionScripts: Record<string, string> = {
   bash: [
-    "_renovate_auto_update() {",
+    "_package_wizard() {",
     '  local current="${COMP_WORDS[COMP_CWORD]}"',
     '  local commands="update audit check pin about completion help"',
     '  local options="--cwd --level --skip --min-severity --dry-run --apply --fix --json --verbose --color --no-color --show-dep-chain --no-update --help --version"',
     '  COMPREPLY=( $(compgen -W "${commands} ${options}" -- "${current}") )',
     "}",
-    "complete -F _renovate_auto_update renovate-auto-update"
+    "complete -F _package_wizard package-wizard"
   ].join("\n"),
   zsh: [
-    "#compdef renovate-auto-update",
-    "_renovate_auto_update() {",
+    "#compdef package-wizard",
+    "_package_wizard() {",
     "  _arguments -C \\",
     "    '1:command:(update audit check pin about completion help)' \\",
     "    '--cwd[Target directory]:path:_files' \\",
@@ -378,22 +378,22 @@ const completionScripts: Record<string, string> = {
     "    '(-h --help)'{-h,--help}[Show help]' \\",
     "    '(-V --version)'{-V,--version}[Show version]'",
     "}",
-    '_renovate_auto_update "$@"'
+    '_package_wizard "$@"'
   ].join("\n"),
   fish: [
-    "complete -c renovate-auto-update -f",
-    "complete -c renovate-auto-update -n '__fish_use_subcommand' -a update -d 'Preview dependency updates'",
-    "complete -c renovate-auto-update -n '__fish_use_subcommand' -a audit -d 'Review security vulnerabilities'",
-    "complete -c renovate-auto-update -n '__fish_use_subcommand' -a check -d 'Check maintenance policy'",
-    "complete -c renovate-auto-update -n '__fish_use_subcommand' -a pin -d 'Preview pinned versions'",
-    "complete -c renovate-auto-update -l cwd -r -d 'Target directory'",
-    "complete -c renovate-auto-update -l level -r -a 'patch minor major' -d 'Maximum update level'",
-    "complete -c renovate-auto-update -l min-severity -r -a 'critical high moderate low info' -d 'Minimum audit severity'",
-    "complete -c renovate-auto-update -s n -l dry-run -d 'Preview changes'",
-    "complete -c renovate-auto-update -s y -l apply -d 'Apply changes'",
-    "complete -c renovate-auto-update -s v -l verbose -d 'Show skipped reasons'",
-    "complete -c renovate-auto-update -l json -d 'Write JSON result'",
-    "complete -c renovate-auto-update -s h -l help -d 'Show help'"
+    "complete -c package-wizard -f",
+    "complete -c package-wizard -n '__fish_use_subcommand' -a update -d 'Preview dependency updates'",
+    "complete -c package-wizard -n '__fish_use_subcommand' -a audit -d 'Review security vulnerabilities'",
+    "complete -c package-wizard -n '__fish_use_subcommand' -a check -d 'Check maintenance policy'",
+    "complete -c package-wizard -n '__fish_use_subcommand' -a pin -d 'Preview pinned versions'",
+    "complete -c package-wizard -l cwd -r -d 'Target directory'",
+    "complete -c package-wizard -l level -r -a 'patch minor major' -d 'Maximum update level'",
+    "complete -c package-wizard -l min-severity -r -a 'critical high moderate low info' -d 'Minimum audit severity'",
+    "complete -c package-wizard -s n -l dry-run -d 'Preview changes'",
+    "complete -c package-wizard -s y -l apply -d 'Apply changes'",
+    "complete -c package-wizard -s v -l verbose -d 'Show skipped reasons'",
+    "complete -c package-wizard -l json -d 'Write JSON result'",
+    "complete -c package-wizard -s h -l help -d 'Show help'"
   ].join("\n")
 }
 

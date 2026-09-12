@@ -1,8 +1,16 @@
 {
-  "name": "renovate-auto-update",
+  "name": "package-wizard",
   "version": "1.0.0",
-  "author": "Ryan Oliver <oliver.ryan9008@gmail.com",
+  "author": "Ryan Oliver <oliver.ryan9008@gmail.com>",
   "description": "CLI and library to update package.json dependencies to latest major, minor, or patch versions",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oliver-ryan9008/package-wizard.git"
+  },
+  "homepage": "https://github.com/oliver-ryan9008/package-wizard#readme",
+  "bugs": {
+    "url": "https://github.com/oliver-ryan9008/package-wizard/issues"
+  },
   "engines": {
     "node": ">=22",
     "npm": ">=10"
@@ -26,7 +34,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "renovate-auto-update": "dist/runner.mjs"
+    "package-wizard": "dist/runner.mjs"
   },
   "files": [
     "dist"
@@ -37,7 +45,8 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "npm run lint && npm run check-types && jest"
+    "test": "npm run lint && npm run check-types && jest",
+    "prepublishOnly": "npm run test && npm run build"
   },
   "keywords": [
     "npm",

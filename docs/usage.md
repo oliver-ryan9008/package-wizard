@@ -1,10 +1,10 @@
 # Using as a project dependency
 
-Install `renovate-auto-update` in the project whose dependencies you want to
+Install `package-wizard` in the project whose dependencies you want to
 manage:
 
 ```bash
-npm install --save-dev renovate-auto-update
+npm install --save-dev package-wizard
 ```
 
 You can then add commands to that project's `package.json`:
@@ -12,10 +12,10 @@ You can then add commands to that project's `package.json`:
 ```json
 {
   "scripts": {
-    "deps:preview": "renovate-auto-update update",
-    "deps:apply": "renovate-auto-update update --apply",
-    "deps:check": "renovate-auto-update check",
-    "deps:audit": "renovate-auto-update audit"
+    "deps:preview": "package-wizard update",
+    "deps:apply": "package-wizard update --apply",
+    "deps:check": "package-wizard check",
+    "deps:audit": "package-wizard audit"
   }
 }
 ```
@@ -30,14 +30,14 @@ npm run deps:audit
 ```
 
 For direct CLI usage from scripts or CI, pass options to
-`renovate-auto-update`, for example:
+`package-wizard`, for example:
 
 ```bash
-renovate-auto-update update
-renovate-auto-update update --apply
-renovate-auto-update audit --min-severity high
-renovate-auto-update audit --apply
-renovate-auto-update check --level major
+package-wizard update
+package-wizard update --apply
+package-wizard audit --min-severity high
+package-wizard audit --apply
+package-wizard check --level major
 ```
 
 Commands that can change files always preview by default. `--apply` writes `package.json`; use it only after reviewing the preview. `--fix` remains a deprecated compatibility alias for `--apply`.
@@ -53,7 +53,7 @@ import {
   checkVulnerabilities,
   hasMandatoryUpdates,
   updatePackageJsonDependencies
-} from "renovate-auto-update"
+} from "package-wizard"
 
 const updates = await updatePackageJsonDependencies({
   cwd: process.cwd(),
@@ -80,19 +80,19 @@ Global installs are scoped to the active Node version.
 
 ```bash
 nvm use
-npm install -g renovate-auto-update
+npm install -g package-wizard
 ```
 
 For local development with `npm link`, switch to the matching Node version
 before building and linking:
 
 ```bash
-cd renovate-auto-update
+cd package-wizard
 nvm use
 npm run build
 npm link
 
 # In the consuming project
 nvm use
-npm link renovate-auto-update
+npm link package-wizard
 ```

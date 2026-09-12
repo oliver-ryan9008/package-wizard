@@ -1,10 +1,10 @@
 # CLI reference
 
-`renovate-auto-update` previews dependency maintenance before it writes files. Run it from the project containing `package.json`, or set another target with `--cwd`.
+`package-wizard` previews dependency maintenance before it writes files. Run it from the project containing `package.json`, or set another target with `--cwd`.
 
 ```bash
-renovate-auto-update update
-renovate-auto-update update --apply
+package-wizard update
+package-wizard update --apply
 ```
 
 Running without arguments opens guided interactive mode. It requires a TTY.
@@ -36,11 +36,11 @@ Running without arguments opens guided interactive mode. It requires a TTY.
 Examples:
 
 ```bash
-renovate-auto-update update --level patch
-renovate-auto-update update --skip react,lodash --skip typescript
-renovate-auto-update update --level major --apply
-renovate-auto-update pin --no-update
-renovate-auto-update pin --apply
+package-wizard update --level patch
+package-wizard update --skip react,lodash --skip typescript
+package-wizard update --level major --apply
+package-wizard pin --no-update
+package-wizard pin --apply
 ```
 
 ## Audit options
@@ -52,9 +52,9 @@ renovate-auto-update pin --apply
 | `-y`, `--apply` | off | Write direct dependency fixes or transitive overrides. |
 
 ```bash
-renovate-auto-update audit
-renovate-auto-update audit --min-severity moderate --show-dep-chain
-renovate-auto-update audit --apply
+package-wizard audit
+package-wizard audit --min-severity moderate --show-dep-chain
+package-wizard audit --apply
 ```
 
 `--skip` and `--level` do not apply to audit mode and are rejected with an actionable error.
@@ -67,8 +67,8 @@ renovate-auto-update audit --apply
 | `--min-severity <level>` | none | Also fail for vulnerabilities at or above this severity. |
 
 ```bash
-renovate-auto-update check
-renovate-auto-update check --level major --min-severity high
+package-wizard check
+package-wizard check --level major --min-severity high
 ```
 
 `check` is always read-only. `--apply` is rejected.
@@ -82,15 +82,15 @@ renovate-auto-update check --level major --min-severity high
 | `-v`, `--verbose` | off | Show individual skipped packages and reasons. |
 | `--color <auto\|always\|never>` | `auto` | Control color output. |
 | `--no-color` | off | Alias for `--color never`. `NO_COLOR` is also respected. |
-| `-h`, `--help` | off | Show general or command-specific help. `renovate-auto-update audit --help` works. |
+| `-h`, `--help` | off | Show general or command-specific help. `package-wizard audit --help` works. |
 | `-V`, `--version` | off | Print installed CLI version. |
 
 Value options support either a separate value or an equals sign:
 
 ```bash
-renovate-auto-update update --level patch
-renovate-auto-update update --level=patch
-renovate-auto-update update -C /work/api
+package-wizard update --level patch
+package-wizard update --level=patch
+package-wizard update -C /work/api
 ```
 
 ## Legacy flags
@@ -111,9 +111,9 @@ Use `--apply` instead of `--fix` in new scripts. Conflicting or irrelevant optio
 Print a completion script for your shell:
 
 ```bash
-renovate-auto-update completion bash
-renovate-auto-update completion zsh
-renovate-auto-update completion fish
+package-wizard completion bash
+package-wizard completion zsh
+package-wizard completion fish
 ```
 
 Install the resulting script using your shell's normal completion setup.
@@ -135,4 +135,4 @@ With `--json`, success writes one result object to stdout and errors write `{ "e
 | `1` | Invalid input, configuration, audit, network, or operational error. |
 | `2` | `check` found mandatory updates or selected vulnerabilities. |
 
-Set `RENOVATE_AUTO_UPDATE_TIMINGS=1` to write audit, metadata-prefetch, and update timings to stderr.
+Set `PACKAGE_WIZARD_TIMINGS=1` to write audit, metadata-prefetch, and update timings to stderr.
