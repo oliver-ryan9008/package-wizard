@@ -42,8 +42,6 @@ package-wizard check --level major
 
 Commands that can change files always preview by default. `--apply` writes `package.json`; use it only after reviewing the preview. `--fix` remains a deprecated compatibility alias for `--apply`.
 
-![Dependency update preview with grouped changes and skipped-package reasons](../demo/update-preview.png)
-
 ## Library usage
 
 Import the public helpers into your own TypeScript or JavaScript scripts:

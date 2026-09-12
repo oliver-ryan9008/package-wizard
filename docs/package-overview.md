@@ -17,8 +17,6 @@ packages, and offer an explicit apply confirmation. Human output stays readable
 at narrow terminal widths; `--json` keeps one compact result on stdout for
 scripts, pipelines, and API integrations.
 
-![Audit preview with severity, dependency-chain, and planned-fix details](../demo/audit.png)
-
 For the complete command-line option list, modes, output formats, and exit
 codes, see the [CLI reference](cli-reference.md). For installation and library
 examples, see [using as a project dependency](usage.md).

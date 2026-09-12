@@ -16,11 +16,8 @@ For use within another project's dependencies, see [using as a project dependenc
 
 Running `package-wizard` without arguments opens an interactive [Clack](https://github.com/bombshell-dev/clack) flow. It shows the selected target project, then guides users through update scope, audit severity, policy checks, pinning, exclusions, and target selection. Interactive mode requires a TTY; use an explicit command in scripts and CI.
 
-![Guided task selection with preview-first default](https://github.com/oliver-ryan9008/package-wizard/raw/main/demo/menu.png)
-
 The default task is a preview. After results are shown, interactive mode offers an explicit **Apply changes** confirmation. Direct commands require `--apply` to write.
 
-![Guided preview, skipped-reason details, and audit review](https://github.com/oliver-ryan9008/package-wizard/raw/main/demo/dry-run-demo.gif)
 
 ```bash
 package-wizard update
