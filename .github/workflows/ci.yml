@@ -23,7 +23,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 26
           cache: npm
 
       - name: Install dependencies
@@ -36,12 +36,8 @@ jobs:
         run: npm run check-types
 
   test:
-    name: Tests (Node ${{ matrix.node-version }})
+    name: Tests
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [22, 26]
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -49,7 +45,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 26
           cache: npm
 
       - name: Install dependencies
@@ -66,9 +62,13 @@ jobs:
           path: coverage/lcov-report
 
   build:
-    name: Package build
+    name: Package build (Node ${{ matrix.node-version }})
     needs: [quality, test]
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 26]
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -76,7 +76,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
           cache: npm
 
       - name: Install dependencies
