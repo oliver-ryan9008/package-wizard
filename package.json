@@ -1,6 +1,6 @@
 {
   "name": "package-wizard",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "author": "Ryan Oliver <oliver.ryan9008@gmail.com>",
   "description": "CLI and library to update package.json dependencies to latest major, minor, or patch versions",
   "repository": {
@@ -34,7 +34,8 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "bin": {
     "package-wizard": "dist/runner.mjs"
