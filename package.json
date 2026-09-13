@@ -49,6 +49,7 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "prepare": "husky",
     "release": "semantic-release",
     "test": "eslint . && tsc --noEmit && jest",
     "prepublishOnly": "npm run test && npm run build"
@@ -88,6 +89,7 @@
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-jest": "29.16.5",
     "eslint-plugin-prettier": "5.5.6",
+    "husky": "9.1.7",
     "jest": "30.4.2",
     "prettier": "3.9.6",
     "semantic-release": "25.0.9",
