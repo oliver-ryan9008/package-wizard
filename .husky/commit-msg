@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+
+if ! command -v node >/dev/null 2>&1; then
+	for node_bin in \
+		"$HOME"/.nvm/versions/node/*/bin \
+		"$HOME"/.local/share/fnm/node-versions/*/installation/bin \
+		"$HOME"/.volta/bin \
+		"${FNM_DIR:-}"/node-versions/*/installation/bin \
+		"${APPDATA:-}"/fnm/node-versions/*/installation/bin \
+		"${LOCALAPPDATA:-}"/Volta/bin \
+		"${NVM_SYMLINK:-}"; do
+		if command -v cygpath >/dev/null 2>&1; then
+			node_bin=$(cygpath -u "$node_bin" 2>/dev/null || printf '%s' "$node_bin")
+		fi
+		if [ -x "$node_bin/node" ]; then
+			PATH="$node_bin:$PATH"
+			export PATH
+			break
+		fi
+	done
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+	echo "husky - Node.js is required to validate commit messages" >&2
+	exit 1
+fi
+
+exec npx --no -- commitlint --edit "$1"
