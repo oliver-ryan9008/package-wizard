@@ -56,9 +56,9 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
-          name: coverage-report-node-${{ matrix.node-version }}
+          name: coverage-report
           path: coverage/lcov-report
 
   build:
