@@ -72,7 +72,3 @@ docs: clarify interactive menu usage
 Releases use semantic release. Merging Conventional Commits to the release
 branch determines the next version, changelog, and Git tag automatically; do
 not edit the package version manually for normal changes.
-
-The repository's `Conventional Commits` pull request check must be required in
-branch protection. The release workflow runs on pushes to `main` and requires
-an `NPM_TOKEN` repository secret with permission to publish `package-wizard`.

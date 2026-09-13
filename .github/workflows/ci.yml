@@ -13,13 +13,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint (Node ${{ matrix.node-version }})
+  quality:
+    name: Lint and type check
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [22, 24, 26]
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -27,7 +23,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 26
           cache: npm
 
       - name: Install dependencies
@@ -36,36 +32,12 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-  typecheck:
-    name: Type check (Node ${{ matrix.node-version }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [22, 24, 26]
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
       - name: Check TypeScript types
         run: npm run check-types
 
   test:
-    name: Tests (Node ${{ matrix.node-version }})
+    name: Tests
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [22, 24, 26]
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -73,7 +45,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 26
           cache: npm
 
       - name: Install dependencies
@@ -84,19 +56,19 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/lcov-report
 
   build:
     name: Package build (Node ${{ matrix.node-version }})
-    needs: [lint, typecheck, test]
+    needs: [quality, test]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        node-version: [22, 24, 26]
+        node-version: [22, 26]
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
