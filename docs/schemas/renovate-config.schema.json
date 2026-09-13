@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/oliver-ryan9008/package-wizard/schemas/renovate-config.schema.json",
+  "title": "Package Wizard supported Renovate configuration",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "ignoreDeps": { "$ref": "#/$defs/stringArray" },
+    "ignoreUnstable": { "type": "boolean" },
+    "minimumReleaseAge": {
+      "anyOf": [{ "type": "string" }, { "type": "number" }, { "const": false }]
+    },
+    "minimumReleaseAgeBehaviour": {
+      "enum": ["timestamp-required", "timestamp-optional"]
+    },
+    "respectLatest": { "type": "boolean" },
+    "updatePinnedDependencies": { "type": "boolean" },
+    "vulnerabilityAlerts": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "vulnerabilityFixStrategy": { "enum": ["lowest", "highest"] }
+      },
+      "additionalProperties": true
+    },
+    "packageRules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/packageRule" }
+    }
+  },
+  "$defs": {
+    "packageRule": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "allowedVersions": { "type": "string" },
+        "ignoreUnstable": { "type": "boolean" },
+        "respectLatest": { "type": "boolean" },
+        "matchPackageNames": { "$ref": "#/$defs/stringArray" },
+        "matchPackagePatterns": { "$ref": "#/$defs/stringArray" },
+        "matchPackagePrefixes": { "$ref": "#/$defs/stringArray" },
+        "matchUpdateTypes": {
+          "type": "array",
+          "items": { "enum": ["patch", "minor", "major"] }
+        },
+        "matchDepTypes": { "$ref": "#/$defs/stringArray" },
+        "updatePinnedDependencies": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

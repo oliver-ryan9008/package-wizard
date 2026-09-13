@@ -1,0 +1,100 @@
+{
+  "name": "package-wizard",
+  "version": "1.0.0",
+  "author": "Ryan Oliver <oliver.ryan9008@gmail.com>",
+  "description": "CLI and library to update package.json dependencies to latest major, minor, or patch versions",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oliver-ryan9008/package-wizard.git"
+  },
+  "homepage": "https://github.com/oliver-ryan9008/package-wizard#readme",
+  "bugs": {
+    "url": "https://github.com/oliver-ryan9008/package-wizard/issues"
+  },
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  },
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "package-wizard": "dist/runner.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "npm run check-types && npm run bundle",
+    "bundle": "tsdown",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "release": "semantic-release",
+    "test": "eslint . && tsc --noEmit && jest",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "keywords": [
+    "npm",
+    "cli",
+    "dependencies",
+    "updater",
+    "package.json",
+    "update",
+    "upgrade",
+    "versions",
+    "audit",
+    "modernize"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@clack/core": "1.4.3",
+    "@clack/prompts": "1.7.0",
+    "chalk": "4.1.2",
+    "semver": "7.8.5"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.2",
+    "@commitlint/config-conventional": "21.2.2",
+    "@eslint/js": "10.0.1",
+    "@semantic-release/changelog": "7.0.0",
+    "@semantic-release/commit-analyzer": "13.0.1",
+    "@semantic-release/git": "11.0.1",
+    "@semantic-release/github": "12.0.9",
+    "@semantic-release/npm": "13.1.5",
+    "@semantic-release/release-notes-generator": "14.1.1",
+    "@types/jest": "30.0.0",
+    "@types/node": "26.5.1",
+    "@types/semver": "7.8.0",
+    "eslint": "10.9.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-jest": "29.16.5",
+    "eslint-plugin-prettier": "5.5.6",
+    "jest": "30.4.2",
+    "prettier": "3.9.6",
+    "semantic-release": "25.0.9",
+    "ts-jest": "29.4.12",
+    "tsdown": "0.22.14",
+    "type-fest": "5.8.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.68.0"
+  }
+}

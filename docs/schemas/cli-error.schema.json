@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/oliver-ryan9008/package-wizard/schemas/cli-error.schema.json",
+  "title": "Package Wizard JSON error",
+  "type": "object",
+  "required": ["error", "code"],
+  "properties": {
+    "error": { "type": "string", "minLength": 1 },
+    "code": { "const": "CLI_ERROR" }
+  },
+  "additionalProperties": false
+}

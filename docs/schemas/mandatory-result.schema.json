@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/oliver-ryan9008/package-wizard/schemas/mandatory-result.schema.json",
+  "title": "Package Wizard mandatory-check result",
+  "type": "object",
+  "required": ["message", "hasMandatoryUpdates"],
+  "properties": {
+    "message": { "type": "string" },
+    "hasMandatoryUpdates": { "type": "boolean" },
+    "updated": { "$ref": "update-result.schema.json#/$defs/packageChanges" },
+    "vulnerabilities": {
+      "type": "array",
+      "items": { "$ref": "audit-result.schema.json#/$defs/vulnerability" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "hasMandatoryUpdates": { "const": false } } },
+      "then": {
+        "properties": {
+          "updated": { "type": "array", "maxItems": 0 },
+          "vulnerabilities": { "type": "array", "maxItems": 0 }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}
