@@ -122,7 +122,12 @@ export const getPackageMetadata = async (
     }
   )
 
-  const value = JSON.parse(stdoutToString(stdout).trim()) as unknown
+  let value = JSON.parse(stdoutToString(stdout).trim()) as unknown
+
+  // npm 12 can wrap multi-field `npm view` output in a singleton array.
+  if (Array.isArray(value) && value.length === 1 && isRecord(value[0])) {
+    value = value[0]
+  }
 
   if (Array.isArray(value)) {
     return {

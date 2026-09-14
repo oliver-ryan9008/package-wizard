@@ -320,6 +320,31 @@ describe("utils integration tests", () => {
         "1.1.0": "2026-08-28T00:00:00.000Z"
       }
     })
+
+    execMock.mockResolvedValueOnce({
+      stdout: Buffer.from(
+        JSON.stringify([
+          {
+            versions: ["1.0.0", "1.1.0"],
+            time: {
+              "1.0.0": "2026-08-26T12:00:00.000Z",
+              "1.1.0": "2026-08-28T00:00:00.000Z"
+            },
+            "dist-tags": { latest: "1.1.0" }
+          }
+        ])
+      )
+    })
+
+    await expect(getPackageMetadata("pkg", "/cwd")).resolves.toEqual({
+      versions: ["1.0.0", "1.1.0"],
+      releaseTimes: {
+        "1.0.0": "2026-08-26T12:00:00.000Z",
+        "1.1.0": "2026-08-28T00:00:00.000Z"
+      },
+      latestVersion: "1.1.0"
+    })
+
     expect(execMock).toHaveBeenCalledWith(
       "npm",
       ["view", "pkg", "versions", "time", "dist-tags", "--json"],

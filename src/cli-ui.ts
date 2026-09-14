@@ -385,7 +385,7 @@ const completionScripts: Record<string, string> = {
     "complete -c package-wizard -n '__fish_use_subcommand' -a update -d 'Preview dependency updates'",
     "complete -c package-wizard -n '__fish_use_subcommand' -a audit -d 'Review security vulnerabilities'",
     "complete -c package-wizard -n '__fish_use_subcommand' -a check -d 'Check maintenance policy'",
-    "complete -c package-wizard -n '__fish_use_subcommand' -a pin -d 'Preview pinned versions'",
+    "complete -c package-wizard -n '__fish_use_subcommand' -a pin -d 'Pin Versions'",
     "complete -c package-wizard -l cwd -r -d 'Target directory'",
     "complete -c package-wizard -l level -r -a 'patch minor major' -d 'Maximum update level'",
     "complete -c package-wizard -l min-severity -r -a 'critical high moderate low info' -d 'Minimum audit severity'",
