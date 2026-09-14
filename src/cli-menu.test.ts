@@ -87,7 +87,7 @@ describe("cli-menu", () => {
     })
     expect(mockedInfoLogger).toHaveBeenCalled()
     expect(mockedGeneralLogger).toHaveBeenCalledWith(
-      "Preview first. Apply only after review."
+      "Preview first. Changes will only be applied after review."
     )
   })
 

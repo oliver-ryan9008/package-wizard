@@ -23,7 +23,6 @@ Running `package-wizard` without arguments opens an interactive [Clack](https://
 
 The default task is a preview. After results are shown, interactive mode offers an explicit **Apply changes** confirmation. Direct commands require `--apply` to write.
 
-
 ```bash
 package-wizard update
 package-wizard audit
@@ -48,6 +47,15 @@ For explanations of package behavior, update policies, audit handling, and
 `renovate.json` configuration, see the [package overview](https://github.com/oliver-ryan9008/package-wizard/blob/main/docs/package-overview.md).
 
 For installation in another project's dependencies, scripts, direct CLI usage, or library usage, see [using as a project dependency](https://github.com/oliver-ryan9008/package-wizard/blob/main/docs/usage.md).
+
+## Support
+
+`package-wizard` is maintained in my spare time. I am a husband, father of
+three, and a professional nerd working to get more involved in open source.
+
+If this project saves you time, you can support its continued maintenance
+through [GitHub Sponsors](https://github.com/sponsors/oliver-ryan9008). Funding
+helps with dependency updates, bug fixes, documentation, and new features.
 
 ## Contributing
 

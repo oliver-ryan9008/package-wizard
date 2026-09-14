@@ -51,8 +51,8 @@ export const COMMAND_DEFINITIONS: readonly CliCommandDefinition[] = [
   },
   {
     command: CliCommand.Pin,
-    label: "Preview pinned versions",
-    description: "Preview exact dependency versions without changing files.",
+    label: "Pin Versions",
+    description: "Pin dependencies to exact versions.",
     usage: "package-wizard pin [options]",
     supportsApply: true,
     examples: [

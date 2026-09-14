@@ -662,93 +662,101 @@ export const run = async (
   const interactive = cliArgs.length === 0
 
   try {
-    if (
-      interactive &&
-      (process.stdin.isTTY === false || process.stdout.isTTY === false)
-    ) {
-      throw new Error(
-        "Interactive mode requires a TTY. Pass a command or --help."
-      )
-    }
+    while (true) {
+      if (
+        interactive &&
+        (process.stdin.isTTY === false || process.stdout.isTTY === false)
+      ) {
+        throw new Error(
+          "Interactive mode requires a TTY. Pass a command or --help."
+        )
+      }
 
-    const selectedArgs = interactive ? await promptForCommand() : cliArgs
-    if (selectedArgs === null) {
-      return
-    }
+      const selectedArgs = interactive ? await promptForCommand() : cliArgs
+      if (selectedArgs === null) {
+        return
+      }
 
-    const options = parseArgs(selectedArgs)
-    setColorMode(options.color ?? ColorMode.Auto)
+      const options = parseArgs(selectedArgs)
+      setColorMode(options.color ?? ColorMode.Auto)
 
-    const updaterVersion = projectPackageJson.version ?? "unknown"
-    if (options.version) {
-      process.stdout.write(`${updaterVersion}\n`)
-      return
-    }
+      const updaterVersion = projectPackageJson.version ?? "unknown"
+      if (options.version) {
+        process.stdout.write(`${updaterVersion}\n`)
+        return
+      }
 
-    if (checkForHelpOptions(options)) {
-      return
-    }
+      if (checkForHelpOptions(options)) {
+        if (!interactive) return
+        continue
+      }
 
-    const command = options.command
-    if (!command) {
-      throw new Error(
-        "Choose a command or run without arguments for guided mode."
-      )
-    }
+      const command = options.command
+      if (!command) {
+        throw new Error(
+          "Choose a command or run without arguments for guided mode."
+        )
+      }
 
-    if (command === CliCommand.About) {
-      aboutHelp()
-      return
-    }
+      if (command === CliCommand.About) {
+        aboutHelp()
+        if (!interactive) return
+        continue
+      }
 
-    if (command === CliCommand.Completion) {
-      printShellCompletion(options.completion ?? "")
-      return
-    }
+      if (command === CliCommand.Completion) {
+        printShellCompletion(options.completion ?? "")
+        return
+      }
 
-    if (options.fix && !options.json) {
-      warnLogger("--fix is deprecated. Use --apply instead.")
-    }
+      if (options.fix && !options.json) {
+        warnLogger("--fix is deprecated. Use --apply instead.")
+      }
 
-    if (!options.json) {
-      printOperationHeader(updaterVersion, command, options)
-    }
+      if (!options.json) {
+        printOperationHeader(updaterVersion, command, options)
+      }
 
-    if (command === CliCommand.Check) {
-      return await runMandatoryUpdatesCheck(options)
-    }
+      if (command === CliCommand.Check) {
+        const result = await runMandatoryUpdatesCheck(options)
+        if (!interactive) return result
+        continue
+      }
 
-    if (command === CliCommand.Audit) {
-      const result = await runAudit(options, dependencies)
+      if (command === CliCommand.Audit) {
+        const result = await runAudit(options, dependencies)
+        await maybeApplyInteractivePreview(
+          interactive,
+          command,
+          options,
+          result.fixed.length,
+          result.skipped.length,
+          () => printAuditResult(result, { ...options, verbose: true }),
+          async applyOptions => {
+            await runAudit(applyOptions, dependencies)
+          }
+        )
+        if (!interactive) return
+        continue
+      }
+
+      const result = await runUpdate(options, dependencies)
       await maybeApplyInteractivePreview(
         interactive,
         command,
         options,
-        result.fixed.length,
-        result.skipped.length,
-        () => printAuditResult(result, { ...options, verbose: true }),
+        result.updated.length,
+        result.skipped.length +
+          result.renovateExcluded.length +
+          (result.releaseAgeWarnings?.length ?? 0) +
+          (result.releaseAgeErrors?.length ?? 0),
+        () => printUpdateResult(result, { ...options, verbose: true }),
         async applyOptions => {
-          await runAudit(applyOptions, dependencies)
+          await runUpdate(applyOptions, dependencies)
         }
       )
-      return
+      if (!interactive) return
     }
-
-    const result = await runUpdate(options, dependencies)
-    await maybeApplyInteractivePreview(
-      interactive,
-      command,
-      options,
-      result.updated.length,
-      result.skipped.length +
-        result.renovateExcluded.length +
-        (result.releaseAgeWarnings?.length ?? 0) +
-        (result.releaseAgeErrors?.length ?? 0),
-      () => printUpdateResult(result, { ...options, verbose: true }),
-      async applyOptions => {
-        await runUpdate(applyOptions, dependencies)
-      }
-    )
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     const reportedError = reportCliError(message, cliArgs.includes("--json"))

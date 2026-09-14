@@ -504,7 +504,9 @@ describe("cli", () => {
         ]
       }
       process.argv = ["node", "cli.js"]
-      mockedPromptForCommand.mockResolvedValueOnce([CliCommand.Update])
+      mockedPromptForCommand
+        .mockResolvedValueOnce([CliCommand.Update])
+        .mockResolvedValueOnce(null)
       mockedPromptForApply.mockResolvedValueOnce(true)
       const dependencies = {
         updatePackageJsonDependencies: jest
@@ -521,6 +523,23 @@ describe("cli", () => {
       expect(
         dependencies.updatePackageJsonDependencies
       ).toHaveBeenNthCalledWith(2, expect.objectContaining({ dryRun: false }))
+    })
+
+    it("returns to the interactive menu after each command", async () => {
+      process.argv = ["node", "cli.js"]
+      mockedPromptForCommand
+        .mockResolvedValueOnce([CliCommand.Update])
+        .mockResolvedValueOnce([CliCommand.Audit])
+        .mockResolvedValueOnce(null)
+      const dependencies = createDependencies()
+
+      await run(dependencies)
+
+      expect(dependencies.updatePackageJsonDependencies).toHaveBeenCalledTimes(
+        1
+      )
+      expect(dependencies.fixVulnerabilities).toHaveBeenCalledTimes(1)
+      expect(mockedPromptForCommand).toHaveBeenCalledTimes(3)
     })
 
     it("shows skipped reasons from the preview without rescanning", async () => {
@@ -543,7 +562,9 @@ describe("cli", () => {
         ]
       }
       process.argv = ["node", "cli.js"]
-      mockedPromptForCommand.mockResolvedValueOnce([CliCommand.Update])
+      mockedPromptForCommand
+        .mockResolvedValueOnce([CliCommand.Update])
+        .mockResolvedValueOnce(null)
       mockedPromptForApply
         .mockResolvedValueOnce("details")
         .mockResolvedValueOnce(false)

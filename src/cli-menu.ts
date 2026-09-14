@@ -144,7 +144,7 @@ const menuOptions: Array<{
   },
   {
     value: CliCommand.Pin,
-    label: "Preview pinned versions",
+    label: "Pin Versions",
     hint: "Review exact version ranges."
   },
   { value: "target", label: "Change target project" },
@@ -473,7 +473,7 @@ export const promptForCommand = async (): Promise<string[] | null> => {
 
   while (true) {
     infoLogger(`Target: ${displayTargetPath(targetDirectory)}`)
-    generalLogger("Preview first. Apply only after review.")
+    generalLogger("Preview first. Changes will only be applied after review.")
 
     const selected = await selectWithDiamond({
       message: "Choose a task",
