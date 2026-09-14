@@ -11,6 +11,10 @@
   "bugs": {
     "url": "https://github.com/oliver-ryan9008/package-wizard/issues"
   },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/oliver-ryan9008"
+  },
   "engines": {
     "node": ">=22",
     "npm": ">=10"
