@@ -1,3 +1,11 @@
+# [1.3.0](https://github.com/oliver-ryan9008/package-wizard/compare/v1.2.2...v1.3.0) (2026-09-14)
+
+
+### Features
+
+* add support for npm 12 ([8d48d04](https://github.com/oliver-ryan9008/package-wizard/commit/8d48d04217cafb221975feff6bc6254d1d3af529))
+* do not auto-exit from interactive menu ([c00d500](https://github.com/oliver-ryan9008/package-wizard/commit/c00d5008041013ca2379c544af830eb77f627c1d))
+
 ## [1.2.2](https://github.com/oliver-ryan9008/package-wizard/compare/v1.2.1...v1.2.2) (2026-09-13)
 
 
