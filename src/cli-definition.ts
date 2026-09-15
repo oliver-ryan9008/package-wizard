@@ -39,6 +39,14 @@ export const COMMAND_DEFINITIONS: readonly CliCommandDefinition[] = [
     ]
   },
   {
+    command: CliCommand.PeerCheck,
+    label: "Check peer dependencies",
+    description: "Check the project for peer dependency conflicts.",
+    usage: "package-wizard peer-check",
+    supportsApply: false,
+    examples: ["package-wizard peer-check"]
+  },
+  {
     command: CliCommand.Check,
     label: "Check maintenance policy",
     description: "Fail with exit code 2 when required maintenance is found.",
@@ -136,6 +144,11 @@ export const COMMAND_OPTIONS: readonly CliOptionDefinition[] = [
     commands: [CliCommand.Update, CliCommand.Pin]
   },
   {
+    flags: "--check-peer-deps",
+    description: "Reject updates with incompatible peer dependencies.",
+    commands: [CliCommand.Update]
+  },
+  {
     flags: "--no-update",
     description: "Pin current versions only; requires pin command.",
     commands: [CliCommand.Pin]
@@ -170,5 +183,6 @@ export const getOperationCommands = (): readonly CliCommand[] => [
   CliCommand.Update,
   CliCommand.Audit,
   CliCommand.Check,
+  CliCommand.PeerCheck,
   CliCommand.Pin
 ]

@@ -17,6 +17,7 @@ const operationCommands = COMMAND_DEFINITIONS.filter(
     definition.command === CliCommand.Update ||
     definition.command === CliCommand.Audit ||
     definition.command === CliCommand.Check ||
+    definition.command === CliCommand.PeerCheck ||
     definition.command === CliCommand.Pin
 )
 
@@ -112,7 +113,7 @@ export const aboutHelp = (): void => {
     "  Preview dependency updates, audit fixes, and maintenance policy checks."
   )
   generalLogger(
-    "  Renovate rules are read from renovate.json before any change is considered."
+    "  Configured dependency rules are checked before any change is considered."
   )
   generalLogger("")
   infoLogger("Use package-wizard --help for commands and examples.")

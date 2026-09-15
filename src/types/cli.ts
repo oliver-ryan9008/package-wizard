@@ -1,6 +1,8 @@
 import { VulnerabilitySeverity } from "./audit"
+import type { DependencyConfig } from "./configuration"
 
 export const UpdateLevel = {
+  All: "all",
   Patch: "patch",
   Minor: "minor",
   Major: "major"
@@ -13,6 +15,7 @@ export const UPDATE_LEVELS = Object.values(UpdateLevel)
 export const CliCommand = {
   Update: "update",
   Audit: "audit",
+  PeerCheck: "peer-check",
   Check: "check",
   Pin: "pin",
   About: "about",
@@ -38,6 +41,7 @@ export const Shell = {
 export type Shell = (typeof Shell)[keyof typeof Shell]
 
 export const UPDATE_LEVEL_RANK: Record<UpdateLevel, number> = {
+  [UpdateLevel.All]: 4,
   [UpdateLevel.Patch]: 1,
   [UpdateLevel.Minor]: 2,
   [UpdateLevel.Major]: 3
@@ -52,6 +56,8 @@ interface BaseOptions {
   mandatoryUpdateCheck?: boolean
   quiet?: boolean
   verbose?: boolean
+  configLog?: boolean
+  dependencyConfig?: DependencyConfig | null
   color?: ColorMode
   command?: CliCommand
   completion?: Shell
@@ -71,9 +77,12 @@ interface AuditOptions {
 
 export interface CliOptions
   extends BaseOptions, UpdateBehaviorOptions, AuditOptions {
+  checkPeerDeps?: boolean
   json?: boolean
   help?: boolean
   version?: boolean
 }
 
-export interface UpdateOptions extends BaseOptions, UpdateBehaviorOptions {}
+export interface UpdateOptions extends BaseOptions, UpdateBehaviorOptions { }
+
+export type DependencyType = "dependencies" | "devDependencies" | "peerDependencies" | "optionalDependencies"

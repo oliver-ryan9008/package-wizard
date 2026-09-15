@@ -18,7 +18,7 @@ import {
 import {
   execFileAsync,
   readPackageJson,
-  readRenovateConfig,
+  readDependencyConfig,
   writePackageJsonAtomically
 } from "./file-utils"
 import {
@@ -31,10 +31,10 @@ import {
 } from "./generic-utils"
 import { getPackageMetadata, parseSupportedSpec } from "./package-utils"
 import {
-  isPackageIgnoredOrDisabledByRenovateConfig,
-  isUpdateDisabledByRenovateConfig,
-  isVersionAllowedByRenovateConfig,
-  shouldUpdatePinnedDependencyByRenovateConfig
+  isPackageIgnoredOrDisabledByConfig,
+  isUpdateDisabledByConfig,
+  isVersionAllowedByConfig,
+  shouldUpdatePinnedDependencyByConfig
 } from "./renovate-utils"
 import { logTiming } from "./timing-utils"
 
@@ -204,7 +204,7 @@ const addDirectVulnerabilityFix = (
   vuln: Vulnerability,
   fixVersion: string,
   packageJson: PackageJson,
-  renovateConfig: Awaited<ReturnType<typeof readRenovateConfig>>,
+  dependencyConfig: Awaited<ReturnType<typeof readDependencyConfig>>,
   directDependencies: DependencyMap,
   fixed: VulnerabilityFixChange[],
   skipped: VulnerabilityFixSkip[],
@@ -234,29 +234,29 @@ const addDirectVulnerabilityFix = (
   const parsed = parseSupportedSpec(currentSpec)
   const currentVersion = parsed?.version ?? semver.coerce(currentSpec)
   const fixSemVer = semver.parse(fixVersion)
-  const packageDisabled = isPackageIgnoredOrDisabledByRenovateConfig(
-    renovateConfig,
+  const packageDisabled = isPackageIgnoredOrDisabledByConfig(
+    dependencyConfig,
     vuln.name,
     section
   )
 
   const blocked =
-    !isVersionAllowedByRenovateConfig(
-      renovateConfig,
+    !isVersionAllowedByConfig(
+      dependencyConfig,
       vuln.name,
       fixVersion,
       section
     ) ||
     (parsed?.prefix === "" &&
-      !shouldUpdatePinnedDependencyByRenovateConfig(
-        renovateConfig,
+      !shouldUpdatePinnedDependencyByConfig(
+        dependencyConfig,
         vuln.name,
         section
       ))
   if (blocked) {
     skipped.push({
       name: vuln.name,
-      reason: "Blocked by renovate.json version policy"
+      reason: "Blocked by configured version policy"
     })
     return
   }
@@ -273,19 +273,25 @@ const addDirectVulnerabilityFix = (
     currentVersion !== null &&
     fixSemVer !== null &&
     (packageDisabled ||
-      isUpdateDisabledByRenovateConfig(
-        renovateConfig,
+      isUpdateDisabledByConfig(
+        dependencyConfig,
         vuln.name,
         getUpdateType(currentVersion, fixSemVer),
         section
       ))
   ) {
-    skipped.push({ name: vuln.name, reason: "Disabled in renovate.json" })
+    skipped.push({
+      name: vuln.name,
+      reason: "Disabled by configured dependency rules"
+    })
     return
   }
 
   if (packageDisabled) {
-    skipped.push({ name: vuln.name, reason: "Disabled in renovate.json" })
+    skipped.push({
+      name: vuln.name,
+      reason: "Disabled by configured dependency rules"
+    })
     return
   }
 
@@ -307,7 +313,7 @@ const addTransitiveVulnerabilityFix = (
   vuln: Vulnerability,
   fixVersion: string,
   packageJson: PackageJson,
-  renovateConfig: Awaited<ReturnType<typeof readRenovateConfig>>,
+  dependencyConfig: Awaited<ReturnType<typeof readDependencyConfig>>,
   directDependencies: DependencyMap,
   fixed: VulnerabilityFixChange[],
   skipped: VulnerabilityFixSkip[],
@@ -318,14 +324,17 @@ const addTransitiveVulnerabilityFix = (
       ? vuln.name
       : (vuln.fixAvailable.name ?? vuln.name)
   const isPackageExcluded = DEPENDENCY_SECTIONS.some(section =>
-    isPackageIgnoredOrDisabledByRenovateConfig(
-      renovateConfig,
+    isPackageIgnoredOrDisabledByConfig(
+      dependencyConfig,
       packageToFix,
       section
     )
   )
   if (isPackageExcluded) {
-    skipped.push({ name: packageToFix, reason: "Disabled in renovate.json" })
+    skipped.push({
+      name: packageToFix,
+      reason: "Disabled by configured dependency rules"
+    })
     return
   }
 
@@ -444,17 +453,21 @@ export const fixVulnerabilities = async (
   const packageJson = await readPackageJson(packageJsonPath, {
     quiet: options.quiet
   })
-  const renovateConfig = await readRenovateConfig(cwd)
+  const dependencyConfig = options.dependencyConfig !== undefined
+    ? options.dependencyConfig
+    : await readDependencyConfig(cwd, { log: options.configLog })
+  const configuredAudit = dependencyConfig?.audit
   const vulnerabilityFixStrategy =
     options.vulnerabilityFixStrategy ??
-    renovateConfig?.vulnerabilityAlerts?.vulnerabilityFixStrategy ??
+    configuredAudit?.vulnerabilityFixStrategy ??
+    dependencyConfig?.vulnerabilityAlerts?.vulnerabilityFixStrategy ??
     "lowest"
 
   const checkOptions: VulnerabilityCheckOptions = {
     cwd,
-    ...(options.minSeverity === undefined
+    ...(options.minSeverity === undefined && configuredAudit?.minSeverity === undefined
       ? {}
-      : { minSeverity: options.minSeverity }),
+      : { minSeverity: options.minSeverity ?? configuredAudit?.minSeverity }),
     quiet: options.quiet
   }
 
@@ -496,7 +509,7 @@ export const fixVulnerabilities = async (
         vuln,
         fixVersion,
         packageJson,
-        renovateConfig,
+        dependencyConfig,
         directDependencies,
         fixed,
         skipped,
@@ -507,7 +520,7 @@ export const fixVulnerabilities = async (
         vuln,
         fixVersion,
         packageJson,
-        renovateConfig,
+        dependencyConfig,
         directDependencies,
         fixed,
         skipped,

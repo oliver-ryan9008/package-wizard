@@ -30,7 +30,7 @@ export interface UpdateResult {
   packageJsonPath: string
   updated: PackageChange[]
   skipped: SkipInfo[]
-  renovateExcluded: SkipInfo[]
+  configExcluded: SkipInfo[]
   releaseAgeWarnings?: SkipInfo[]
   releaseAgeErrors?: SkipInfo[]
   minimumReleaseAge?: string | number | false

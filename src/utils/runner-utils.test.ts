@@ -17,7 +17,7 @@ import { getDependencyChain } from "./audit-utils"
 import {
   execFileAsync,
   readPackageJson,
-  readRenovateConfig
+  readDependencyConfig
 } from "./file-utils"
 import * as auditUtils from "./audit-utils"
 import * as packageUtils from "./package-utils"
@@ -36,14 +36,14 @@ jest.mock("node:fs", () => ({
 jest.mock("./file-utils", () => ({
   execFileAsync: jest.fn(),
   readPackageJson: jest.fn(),
-  readRenovateConfig: jest.fn(),
+  readDependencyConfig: jest.fn(),
   writePackageJsonAtomically:
     jest.requireActual("./file-utils").writePackageJsonAtomically
 }))
 
 const execMock = execFileAsync as unknown as jest.Mock
 const readPackageJsonMock = readPackageJson as unknown as jest.Mock
-const readRenovateConfigMock = readRenovateConfig as unknown as jest.Mock
+const readDependencyConfigMock = readDependencyConfig as unknown as jest.Mock
 const writeFileMock = fs.writeFile as unknown as jest.Mock
 const renameMock = fs.rename as unknown as jest.Mock
 const rmMock = fs.rm as unknown as jest.Mock
@@ -203,7 +203,7 @@ describe("utils helpers", () => {
   describe("release age filtering", () => {
     const now = Date.parse("2026-08-28T12:00:00.000Z")
 
-    it("defaults minimum release age to one day", () => {
+    it("parses a configured one-day minimum release age", () => {
       expect(parseMinimumReleaseAge("1 day")).toBe(24 * 60 * 60 * 1000)
       expect(
         filterVersionsByReleaseAge(
@@ -547,7 +547,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "workspace:*" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
 
     const res = await utils.updatePackageJsonDependencies({
       cwd: "/repo",
@@ -567,7 +567,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { react: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
 
     const res1 = await utils.updatePackageJsonDependencies({
       cwd: "/repo",
@@ -599,7 +599,7 @@ describe("utils coverage tests", () => {
 
   it("handles failed version fetch and no eligible updates", async () => {
     readPackageJsonMock.mockResolvedValueOnce({ dependencies: { a: "^1.2.0" } })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
 
     execMock.mockRejectedValueOnce(new Error("npm view failed"))
 
@@ -636,7 +636,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { disabled: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce({
+    readDependencyConfigMock.mockResolvedValueOnce({
       packageRules: [{ enabled: false, matchPackageNames: ["disabled"] }]
     })
 
@@ -645,12 +645,12 @@ describe("utils coverage tests", () => {
       dryRun: true
     })
 
-    expect(res.renovateExcluded.some(e => e.name === "disabled")).toBe(true)
+    expect(res.configExcluded.some(e => e.name === "disabled")).toBe(true)
 
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { lib: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1","1.2.0","2.0.0"]')
     })
@@ -668,7 +668,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { lib: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1","1.2.0","2.0.0"]')
     })
@@ -830,7 +830,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1","1.2.0","2.0.0"]')
     })
@@ -856,7 +856,9 @@ describe("utils coverage tests", () => {
         tooNew: "1.1.0"
       }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce({
+      minimumReleaseAge: "1 day"
+    })
     execMock
       .mockResolvedValueOnce({
         stdout: Buffer.from(
@@ -920,7 +922,9 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { "sample-package": "1.11.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce({
+      minimumReleaseAge: "1 day"
+    })
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from(
         JSON.stringify({
@@ -1006,7 +1010,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.0"]')
     })
@@ -1244,7 +1248,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({ stdout: Buffer.from('["1.0.1"]') })
     writeFileMock.mockResolvedValueOnce(undefined)
     renameMock.mockRejectedValueOnce(new Error("rename failed"))
@@ -1336,7 +1340,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1"]')
     })
@@ -1352,7 +1356,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1"]')
     })
@@ -1378,7 +1382,7 @@ describe("utils coverage tests", () => {
 
   it("updatePackageJsonDependencies with no dependencies", async () => {
     readPackageJsonMock.mockResolvedValueOnce({})
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     writeFileMock.mockResolvedValueOnce(undefined)
 
     const result = await utils.updatePackageJsonDependencies({
@@ -1431,7 +1435,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce({
+    readDependencyConfigMock.mockResolvedValueOnce({
       vulnerabilityAlerts: { vulnerabilityFixStrategy: "highest" }
     })
     execMock.mockResolvedValueOnce({
@@ -1482,7 +1486,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce({
+    readDependencyConfigMock.mockResolvedValueOnce({
       packageRules: [
         {
           matchPackageNames: ["pkg"],
@@ -1519,7 +1523,7 @@ describe("utils coverage tests", () => {
     expect(result.fixed).toEqual([])
     expect(result.skipped).toContainEqual({
       name: "pkg",
-      reason: "Disabled in renovate.json"
+      reason: "Disabled by configured dependency rules"
     })
   })
 
@@ -1527,7 +1531,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { app: "1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce({
+    readDependencyConfigMock.mockResolvedValueOnce({
       packageRules: [
         {
           matchPackageNames: ["transitive-pkg"],
@@ -1564,7 +1568,7 @@ describe("utils coverage tests", () => {
     expect(result.fixed).toEqual([])
     expect(result.skipped).toContainEqual({
       name: "transitive-pkg",
-      reason: "Disabled in renovate.json"
+      reason: "Disabled by configured dependency rules"
     })
   })
 
@@ -1614,7 +1618,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       devDependencies: { devpkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1","1.2.0"]')
     })
@@ -1634,7 +1638,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       peerDependencies: { peerpkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1"]')
     })
@@ -1654,7 +1658,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1"]')
     })
@@ -1670,7 +1674,7 @@ describe("utils coverage tests", () => {
     readPackageJsonMock.mockResolvedValueOnce({
       dependencies: { pkg: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1"]')
     })
@@ -1783,7 +1787,7 @@ describe("utils coverage tests", () => {
       devDependencies: { pkg2: "^1.0.0" },
       peerDependencies: { pkg3: "^1.0.0" }
     })
-    readRenovateConfigMock.mockResolvedValueOnce(null)
+    readDependencyConfigMock.mockResolvedValueOnce(null)
     execMock.mockResolvedValueOnce({
       stdout: Buffer.from('["1.0.1"]')
     })

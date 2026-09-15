@@ -4,8 +4,10 @@
 [![Node.js 22+](https://img.shields.io/badge/node-%3E%3D22-22c55e.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/oliver-ryan9008/package-wizard/actions/workflows/ci.yml/badge.svg)](https://github.com/oliver-ryan9008/package-wizard/actions/workflows/ci.yml)
+[![GitHub Sponsors](https://img.shields.io/badge/Buy%20me%20some%20caffeine-black?style=flat&logo=buymeacoffee&logoColor=black&color=FFDD00)](https://github.com/sponsors/oliver-ryan9008)
 
-`package-wizard` is an npm library and CLI for previewing, reviewing, and applying dependency maintenance. It respects your project's `renovate.json` configuration, so disabled packages are never touched. Every change-capable command previews first; `--apply` is required to write `package.json`.
+
+`package-wizard` is an npm library and CLI for previewing, reviewing, and applying dependency maintenance. It uses a native `package.wizard.*` configuration when present, with fallback support for `renovate.json`, npm-check-updates' `.ncurc.json`, and Dependabot's `.github/dependabot.yml`. Every change-capable command previews first; `--apply` is required to write `package.json`.
 
 ## Install
 
@@ -26,10 +28,18 @@ The default task is a preview. After results are shown, interactive mode offers 
 ```bash
 package-wizard update
 package-wizard audit
+package-wizard peer-check
 package-wizard check
 package-wizard pin --no-update
 package-wizard update --level major --apply
+package-wizard update --check-peer-deps
 ```
+
+Update runs can optionally reject candidate versions whose peer dependencies
+or Node.js/npm `engines` are incompatible with the current environment. In
+guided mode, this choice appears after the package-skip prompt. The standalone
+`peer-check` command performs the same compatibility check for the current
+dependency set.
 
 ## Terminal ergonomics
 
@@ -43,8 +53,40 @@ package-wizard completion bash
 package-wizard completion fish
 ```
 
+Load completion for the current shell session:
+
+```bash
+source <(package-wizard completion bash)
+```
+
+```zsh
+source <(package-wizard completion zsh)
+```
+
+```fish
+package-wizard completion fish | source
+```
+
+To load it in future sessions, add the Bash or Zsh command to `~/.bashrc` or
+`~/.zshrc`:
+
+```bash
+eval "$(package-wizard completion bash)"
+```
+
+```zsh
+eval "$(package-wizard completion zsh)"
+```
+
+For Fish, save the generated file in Fish's completion directory:
+
+```fish
+mkdir -p ~/.config/fish/completions
+package-wizard completion fish > ~/.config/fish/completions/package-wizard.fish
+```
+
 For explanations of package behavior, update policies, audit handling, and
-`renovate.json` configuration, see the [package overview](https://github.com/oliver-ryan9008/package-wizard/blob/main/docs/package-overview.md).
+configuration, see the [package overview](https://github.com/oliver-ryan9008/package-wizard/blob/main/docs/package-overview.md).
 
 For installation in another project's dependencies, scripts, direct CLI usage, or library usage, see [using as a project dependency](https://github.com/oliver-ryan9008/package-wizard/blob/main/docs/usage.md).
 

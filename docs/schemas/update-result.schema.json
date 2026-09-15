@@ -7,7 +7,7 @@
     "packageJsonPath",
     "updated",
     "skipped",
-    "renovateExcluded",
+    "configExcluded",
     "releaseAgeWarnings",
     "releaseAgeErrors",
     "minimumReleaseAge"
@@ -16,7 +16,7 @@
     "packageJsonPath": { "type": "string", "minLength": 1 },
     "updated": { "$ref": "#/$defs/packageChanges" },
     "skipped": { "$ref": "#/$defs/skipInfo" },
-    "renovateExcluded": { "$ref": "#/$defs/skipInfo" },
+    "configExcluded": { "$ref": "#/$defs/skipInfo" },
     "releaseAgeWarnings": { "$ref": "#/$defs/skipInfo" },
     "releaseAgeErrors": { "$ref": "#/$defs/skipInfo" },
     "minimumReleaseAge": {

@@ -17,9 +17,14 @@ import { existsSync } from "node:fs"
 import path from "node:path"
 import { styleText } from "node:util"
 import { getCommandDefinition } from "./cli-definition"
+import {
+  readDependencyConfigWithSource,
+  type DependencyConfigSource
+} from "./utils/file-utils"
 import { aboutHelp, generalHelpBanner } from "./logging-utils/help-options"
 import { generalLogger, infoLogger } from "./logging-utils/logger"
 import { CliCommand, Shell, UpdateLevel, VulnerabilitySeverity } from "./types"
+import type { DependencyConfig } from "./types"
 
 type MenuAction = CliCommand | "target" | "help" | "back" | "exit"
 type BackAction = "back"
@@ -41,6 +46,8 @@ type SelectOptions<Value> = {
   maxItems?: number
   showInstructions?: boolean
 }
+
+const goodbyeMessage = "Thanks for using Package Wizard! Goodbye."
 
 const renderOption = <Value>(
   option: SelectOption<Value> | undefined,
@@ -143,6 +150,11 @@ const menuOptions: Array<{
     hint: "For CI and release gates."
   },
   {
+    value: CliCommand.PeerCheck,
+    label: "Check peer dependencies",
+    hint: "Find incompatible dependency requirements."
+  },
+  {
     value: CliCommand.Pin,
     label: "Pin Versions",
     hint: "Review exact version ranges."
@@ -155,13 +167,18 @@ const menuOptions: Array<{
 
 const updateLevelOptions = [
   {
+    value: UpdateLevel.All,
+    label: "All update levels",
+    hint: "Includes patch, minor, and major updates."
+  },
+  {
     value: UpdateLevel.Patch,
     label: "Patch updates only",
     hint: "Lowest risk."
   },
   {
     value: UpdateLevel.Minor,
-    label: "Minor and patch updates (Default)",
+    label: "Minor and patch updates",
     hint: "Recommended."
   },
   {
@@ -170,6 +187,55 @@ const updateLevelOptions = [
     hint: "Review breaking changes carefully."
   }
 ]
+
+const isGlobalRule = (rule: NonNullable<DependencyConfig["packageRules"]>[number]): boolean =>
+  rule.matchPackageNames === undefined &&
+  rule.matchPackagePatterns === undefined &&
+  rule.matchPackagePrefixes === undefined
+
+const configuredUpdateLevel = (
+  dependencyConfig: DependencyConfig | null
+): UpdateLevel | null => {
+  if (!dependencyConfig?.packageRules) return null
+
+  const blocked = new Set<UpdateLevel>()
+  const enabled = new Set<UpdateLevel>()
+  for (const rule of dependencyConfig.packageRules) {
+    if (!isGlobalRule(rule) || !rule.matchUpdateTypes) continue
+    for (const updateType of rule.matchUpdateTypes) {
+      if (rule.enabled === false) blocked.add(updateType)
+      if (rule.enabled === true) enabled.add(updateType)
+    }
+  }
+
+  const allowed = enabled.size > 0 ? enabled : new Set([
+    UpdateLevel.Patch,
+    UpdateLevel.Minor,
+    UpdateLevel.Major
+  ])
+  const available = new Set([...allowed].filter(updateType => !blocked.has(updateType)))
+  if (
+    available.has(UpdateLevel.Patch) &&
+    available.has(UpdateLevel.Minor) &&
+    available.has(UpdateLevel.Major)
+  ) {
+    return UpdateLevel.All
+  }
+  if (available.has(UpdateLevel.Major)) return UpdateLevel.Major
+  if (available.has(UpdateLevel.Minor)) return UpdateLevel.Minor
+  if (available.has(UpdateLevel.Patch)) return UpdateLevel.Patch
+  return null
+}
+
+const updateLevelOptionsFor = (defaultLevel: UpdateLevel | null, configSource: string | null) =>
+  updateLevelOptions.map(option => ({
+    ...option,
+    ...(option.value === (defaultLevel ?? UpdateLevel.Minor)
+      ? {
+          label: `${option.label} (${configSource ? `Configured by ${configSource}` : "Recommended"})`
+        }
+      : {})
+  }))
 
 const severityOptions = [
   {
@@ -195,26 +261,30 @@ const targetPackageJsonPath = (targetDirectory: string): string =>
 
 const displayTargetPath = (targetDirectory: string): string => {
   const packagePath = targetPackageJsonPath(targetDirectory)
-  const relativeToHome = path.relative(process.env.HOME ?? "", packagePath)
-
-  return relativeToHome && !relativeToHome.startsWith("..")
-    ? `~/${relativeToHome}`
-    : packagePath
+  return `${path.basename(path.dirname(packagePath))}/${path.basename(packagePath)}`
 }
 
 const isPromptCancelled = (value: unknown): boolean => isCancel(value)
 
-const promptForUpdateLevel = async (): Promise<
+const returnToMainMenu = (customPrefix?: string): void => {
+  const message = customPrefix ? `${customPrefix} Returning to the main menu.` : "Returning to the main menu."
+  cancel(styleText("red", message))
+}
+
+const promptForUpdateLevel = async (
+  defaultLevel: UpdateLevel | null,
+  configSource: string | null
+): Promise<
   UpdateLevel | BackAction | null
 > => {
   const selected = await selectWithDiamond({
     message: "Choose update scope",
-    initialValue: UpdateLevel.Minor,
-    options: [...updateLevelOptions, backOption]
+    initialValue: defaultLevel ?? UpdateLevel.Minor,
+    options: [...updateLevelOptionsFor(defaultLevel, configSource), backOption]
   })
 
   if (isPromptCancelled(selected)) {
-    cancel("Update selection cancelled.")
+    returnToMainMenu()
     return null
   }
 
@@ -228,37 +298,79 @@ const promptForSkippedPackages = async (): Promise<string | null> => {
   })
 
   if (isPromptCancelled(skippedPackages)) {
-    cancel("Update selection cancelled.")
+    returnToMainMenu()
     return null
   }
 
   return (skippedPackages as string).trim()
 }
 
-const promptForUpdate = async (): Promise<string[] | BackAction | null> => {
-  const level = await promptForUpdateLevel()
+const promptForPeerDependencyCheck = async (): Promise<boolean | null> => {
+  const selected = await selectWithDiamond({
+    message: "Evaluate peer dependencies for requested updates?",
+    initialValue: "no",
+    options: [
+      {
+        value: "no",
+        label: "No (Default)",
+        hint: "Use normal update compatibility checks."
+      },
+      {
+        value: "yes",
+        label: "Yes",
+        hint: "Reject updates that create peer dependency conflicts."
+      },
+      backOption
+    ]
+  })
+
+  if (isPromptCancelled(selected)) {
+    returnToMainMenu()
+    return null
+  }
+  if (selected === "back") return null
+  return selected === "yes"
+}
+
+const promptForUpdate = async (
+  defaultLevel: UpdateLevel | null,
+  configSource: string | null
+): Promise<string[] | BackAction | null> => {
+  const level = await promptForUpdateLevel(defaultLevel, configSource)
   if (level === null) return null
   if (level === "back") return "back"
 
   const skippedPackages = await promptForSkippedPackages()
   if (skippedPackages === null) return null
+  const checkPeerDeps = await promptForPeerDependencyCheck()
+  if (checkPeerDeps === null) return null
 
   return [
     CliCommand.Update,
     "--level",
     level,
-    ...(skippedPackages ? ["--skip", skippedPackages] : [])
+    ...(skippedPackages ? ["--skip", skippedPackages] : []),
+    ...(checkPeerDeps ? ["--check-peer-deps"] : [])
   ]
 }
 
-const promptForAudit = async (): Promise<string[] | BackAction | null> => {
+const configuredLabel = (configSource: string | null): string =>
+  configSource ? `Configured by ${configSource}` : "Default"
+
+const promptForAudit = async (
+  auditConfig: DependencyConfig["audit"],
+  configSource: string | null
+): Promise<string[] | BackAction | null> => {
+  const defaultSeverity = auditConfig?.minSeverity ?? VulnerabilitySeverity.High
+  const defaultShowDepChain = auditConfig?.showDepChain ?? false
+  const hasConfiguredShowDepChain = auditConfig?.showDepChain !== undefined
   const severity = await selectWithDiamond({
     message: "Choose minimum vulnerability severity",
-    initialValue: VulnerabilitySeverity.High,
+    initialValue: defaultSeverity,
     options: [
       ...severityOptions.map(option =>
-        option.value === VulnerabilitySeverity.High
-          ? { ...option, label: `${option.label} (Default)` }
+        option.value === defaultSeverity
+          ? { ...option, label: `${option.label} (${configuredLabel(configSource)})` }
           : option
       ),
       backOption
@@ -266,23 +378,31 @@ const promptForAudit = async (): Promise<string[] | BackAction | null> => {
   })
 
   if (isPromptCancelled(severity)) {
-    cancel("Audit selection cancelled.")
+    returnToMainMenu()
     return null
   }
   if (severity === "back") return "back"
 
   const includeDependencyChains = await selectWithDiamond({
     message: "Show indirect dependency chains?",
-    initialValue: false,
+    initialValue: defaultShowDepChain,
     options: [
       {
         value: false,
-        label: "No (Default)",
+        label: `No${
+          defaultShowDepChain === false
+            ? ` (${configuredLabel(hasConfiguredShowDepChain ? configSource : null)})`
+            : ""
+        }`,
         hint: "Keep report compact."
       },
       {
         value: true,
-        label: "Yes",
+        label: `Yes${
+          defaultShowDepChain === true
+            ? ` (${configuredLabel(hasConfiguredShowDepChain ? configSource : null)})`
+            : ""
+        }`,
         hint: "Show where indirect issues come from."
       },
       backOption
@@ -290,7 +410,7 @@ const promptForAudit = async (): Promise<string[] | BackAction | null> => {
   })
 
   if (isPromptCancelled(includeDependencyChains)) {
-    cancel("Audit selection cancelled.")
+    returnToMainMenu()
     return null
   }
   if (includeDependencyChains === "back") return "back"
@@ -303,8 +423,11 @@ const promptForAudit = async (): Promise<string[] | BackAction | null> => {
   ]
 }
 
-const promptForCheck = async (): Promise<string[] | BackAction | null> => {
-  const level = await promptForUpdateLevel()
+const promptForCheck = async (
+  defaultLevel: UpdateLevel | null,
+  configSource: string | null
+): Promise<string[] | BackAction | null> => {
+  const level = await promptForUpdateLevel(defaultLevel, configSource)
   if (level === null) return null
   if (level === "back") return "back"
 
@@ -327,7 +450,7 @@ const promptForCheck = async (): Promise<string[] | BackAction | null> => {
   })
 
   if (isPromptCancelled(auditSeverity)) {
-    cancel("Check selection cancelled.")
+    returnToMainMenu()
     return null
   }
   if (auditSeverity === "back") return "back"
@@ -342,7 +465,10 @@ const promptForCheck = async (): Promise<string[] | BackAction | null> => {
   ]
 }
 
-const promptForPin = async (): Promise<string[] | BackAction | null> => {
+const promptForPin = async (
+  defaultLevel: UpdateLevel | null,
+  configSource: string | null
+): Promise<string[] | BackAction | null> => {
   const selected = await selectWithDiamond({
     message: "Choose pin behavior",
     initialValue: "current",
@@ -362,7 +488,7 @@ const promptForPin = async (): Promise<string[] | BackAction | null> => {
   })
 
   if (isPromptCancelled(selected)) {
-    cancel("Pin selection cancelled.")
+    returnToMainMenu()
     return null
   }
   if (selected === "back") return "back"
@@ -371,7 +497,7 @@ const promptForPin = async (): Promise<string[] | BackAction | null> => {
     return [CliCommand.Pin, "--no-update"]
   }
 
-  const level = await promptForUpdateLevel()
+  const level = await promptForUpdateLevel(defaultLevel, configSource)
   if (level === null) return null
   if (level === "back") return "back"
 
@@ -405,7 +531,7 @@ const promptForTargetDirectory = async (
   })
 
   if (isPromptCancelled(enteredPath)) {
-    cancel("Target project selection cancelled.")
+    returnToMainMenu()
     return null
   }
 
@@ -424,7 +550,7 @@ export const promptForApply = async (
     options: [
       {
         value: false,
-        label: "Keep preview (Default)",
+        label: "Close preview (Default)",
         hint: "No files change."
       },
       {
@@ -450,7 +576,7 @@ export const promptForApply = async (
   })
 
   if (isPromptCancelled(selected)) {
-    cancel("Changes were not applied.")
+    returnToMainMenu("Operation cancelled. No changes applied.")
     return null
   }
 
@@ -459,7 +585,32 @@ export const promptForApply = async (
   return selected as boolean | "details"
 }
 
-export const promptForCommand = async (): Promise<string[] | null> => {
+export const promptForAcknowledge = async (): Promise<boolean> => {
+  const acknowledged = await selectWithDiamond({
+    message: "Press Enter to return to the main menu",
+    initialValue: true,
+    options: [
+      {
+        value: true,
+        label: "Acknowledge"
+      }
+    ],
+    showInstructions: false
+  })
+
+  if (isPromptCancelled(acknowledged)) {
+    returnToMainMenu()
+    return false
+  }
+
+  return true
+}
+
+export type InteractiveConfigCache = Map<string, DependencyConfigSource | null>
+
+export const promptForCommand = async (
+  configCache: InteractiveConfigCache = new Map()
+): Promise<string[] | null> => {
   let targetDirectory = process.cwd()
   const packageJsonPath = targetPackageJsonPath(targetDirectory)
 
@@ -470,10 +621,32 @@ export const promptForCommand = async (): Promise<string[] | null> => {
   }
 
   intro("Package Wizard")
+  generalLogger("")
 
   while (true) {
+    let loadedConfig: DependencyConfigSource | null
+    if (configCache.has(targetDirectory)) {
+      loadedConfig = configCache.get(targetDirectory) ?? null
+    } else {
+      loadedConfig = await readDependencyConfigWithSource(targetDirectory)
+      configCache.set(targetDirectory, loadedConfig)
+    }
+    const dependencyConfig = loadedConfig?.config ?? null
+    const defaultLevel = configuredUpdateLevel(dependencyConfig)
+    if (loadedConfig === null) {
+      infoLogger("No dependency configuration found; using built-in defaults.")
+    }
     infoLogger(`Target: ${displayTargetPath(targetDirectory)}`)
-    generalLogger("Preview first. Changes will only be applied after review.")
+    generalLogger("Preview first.")
+    generalLogger("Changes apply only after review.")
+    if (loadedConfig !== null) {
+      generalLogger(`Configured by ${loadedConfig.source}.`)
+      generalLogger(
+        "Individual package rules may further restrict eligible updates."
+      )
+    }
+
+    generalLogger("")
 
     const selected = await selectWithDiamond({
       message: "Choose a task",
@@ -482,11 +655,12 @@ export const promptForCommand = async (): Promise<string[] | null> => {
     })
 
     if (isPromptCancelled(selected)) {
-      cancel("Operation cancelled.")
+      cancel(goodbyeMessage)
       return null
     }
 
     if (selected === "exit") {
+      cancel(goodbyeMessage)
       return null
     }
 
@@ -497,7 +671,7 @@ export const promptForCommand = async (): Promise<string[] | null> => {
     if (selected === "target") {
       const nextTargetDirectory =
         await promptForTargetDirectory(targetDirectory)
-      if (nextTargetDirectory === null) return null
+      if (nextTargetDirectory === null) continue
       targetDirectory = nextTargetDirectory
       continue
     }
@@ -515,18 +689,23 @@ export const promptForCommand = async (): Promise<string[] | null> => {
     let args: string[] | BackAction | null
 
     if (selected === CliCommand.Update) {
-      args = await promptForUpdate()
+      args = await promptForUpdate(defaultLevel, loadedConfig?.source ?? null)
     } else if (selected === CliCommand.Audit) {
-      args = await promptForAudit()
+      args = await promptForAudit(
+        dependencyConfig?.audit,
+        loadedConfig?.source ?? null
+      )
     } else if (selected === CliCommand.Check) {
-      args = await promptForCheck()
+      args = await promptForCheck(defaultLevel, loadedConfig?.source ?? null)
+    } else if (selected === CliCommand.PeerCheck) {
+      args = [CliCommand.PeerCheck]
     } else if (selected === CliCommand.Pin) {
-      args = await promptForPin()
+      args = await promptForPin(defaultLevel, loadedConfig?.source ?? null)
     } else {
       return null
     }
 
-    if (args === null) return null
+    if (args === null) continue
     if (args === "back") continue
     return [...args, "--cwd", targetDirectory]
   }

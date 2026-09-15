@@ -1,4 +1,5 @@
 import { DependencySection, PackageChange } from "./packages"
+import type { DependencyConfig } from "./configuration"
 
 export const VulnerabilitySeverity = {
   Info: "info",
@@ -107,6 +108,8 @@ export interface VulnerabilityFixOptions {
   dryRun?: boolean
   quiet?: boolean
   vulnerabilityFixStrategy?: "lowest" | "highest"
+  configLog?: boolean
+  dependencyConfig?: DependencyConfig | null
 }
 
 export interface VulnerabilityFixResult {

@@ -16,7 +16,7 @@ import {
 } from "../types"
 import {
   readPackageJson,
-  readRenovateConfig,
+  readDependencyConfig,
   writePackageJsonAtomically
 } from "./file-utils"
 import { checkVulnerabilities, fixVulnerabilities } from "./audit-utils"
@@ -32,14 +32,15 @@ import {
   TargetUpdate
 } from "./package-utils"
 import {
-  isPackageIgnoredOrDisabledByRenovateConfig,
-  isVersionAllowedByRenovateConfig,
-  shouldIgnoreUnstableByRenovateConfig,
-  shouldRespectLatestByRenovateConfig,
+  isPackageIgnoredOrDisabledByConfig,
+  isVersionAllowedByConfig,
+  shouldIgnoreUnstableByConfig,
+  shouldRespectLatestByConfig,
   shouldSkipUpdate,
-  shouldUpdatePinnedDependencyByRenovateConfig
+  shouldUpdatePinnedDependencyByConfig
 } from "./renovate-utils"
 import { logTiming } from "./timing-utils"
+import { checkPeerDependencies } from "./peer-utils"
 
 interface DependencyTarget {
   section: (typeof DEPENDENCY_SECTIONS)[number]
@@ -51,7 +52,7 @@ interface DependencyTarget {
 
 interface UpdateTargetContext {
   packageJson: PackageJson
-  renovateConfig: Awaited<ReturnType<typeof readRenovateConfig>>
+  dependencyConfig: Awaited<ReturnType<typeof readDependencyConfig>>
   metadataCache: Map<string, Promise<PackageMetadata>>
   cwd: string
   level: UpdateLevel
@@ -59,7 +60,7 @@ interface UpdateTargetContext {
   noUpdate: boolean
   skip: Set<string>
   minimumReleaseAge: string | number | false
-  minimumReleaseAgeBehaviour: "timestamp-required" | "timestamp-optional"
+  minimumReleaseAgeBehavior: "timestamp-required" | "timestamp-optional"
   minimumAge: number
   now: number
   allPackages: string[]
@@ -67,9 +68,10 @@ interface UpdateTargetContext {
   spinner: ReturnType<typeof startSpinner> | null
   updated: PackageChange[]
   skipped: SkipInfo[]
-  renovateExcluded: SkipInfo[]
+  configExcluded: SkipInfo[]
   releaseAgeWarnings: SkipInfo[]
   releaseAgeErrors: SkipInfo[]
+  peerStrategy: "ignore" | "strict"
 }
 
 const getCachedPackageMetadata = (
@@ -123,7 +125,7 @@ const processUpdateTarget = async (
 ): Promise<void> => {
   const {
     packageJson,
-    renovateConfig,
+    dependencyConfig,
     metadataCache,
     cwd,
     level,
@@ -131,16 +133,17 @@ const processUpdateTarget = async (
     noUpdate,
     skip,
     minimumReleaseAge,
-    minimumReleaseAgeBehaviour,
+    minimumReleaseAgeBehavior,
     minimumAge,
     now,
     allPackages,
     spinner,
     updated,
     skipped,
-    renovateExcluded,
+    configExcluded,
     releaseAgeWarnings,
     releaseAgeErrors
+    , peerStrategy
   } = context
   const { section, name, currentSpec, parsed, disabled } = target
   const sectionDeps = getDependencyRecord(packageJson, section)
@@ -163,10 +166,10 @@ const processUpdateTarget = async (
     return
   }
   if (disabled) {
-    renovateExcluded.push({
+    configExcluded.push({
       section,
       name,
-      reason: "Disabled in renovate.json"
+      reason: "Disabled by configured dependency rules"
     })
     return
   }
@@ -186,12 +189,12 @@ const processUpdateTarget = async (
 
   if (
     parsed.prefix === "" &&
-    !shouldUpdatePinnedDependencyByRenovateConfig(renovateConfig, name, section)
+    !shouldUpdatePinnedDependencyByConfig(dependencyConfig, name, section)
   ) {
     skipped.push({
       section,
       name,
-      reason: "Pinned dependency updates disabled in renovate.json"
+      reason: "Pinned dependency updates disabled by configured rules"
     })
     return
   }
@@ -204,13 +207,13 @@ const processUpdateTarget = async (
     return
   }
 
-  const ignoreUnstable = shouldIgnoreUnstableByRenovateConfig(
-    renovateConfig,
+  const ignoreUnstable = shouldIgnoreUnstableByConfig(
+    dependencyConfig,
     name,
     section
   )
-  const respectLatest = shouldRespectLatestByRenovateConfig(
-    renovateConfig,
+  const respectLatest = shouldRespectLatestByConfig(
+    dependencyConfig,
     name,
     section
   )
@@ -229,7 +232,7 @@ const processUpdateTarget = async (
     metadata.releaseTimes,
     minimumReleaseAge,
     now,
-    minimumReleaseAgeBehaviour
+    minimumReleaseAgeBehavior
   )
   const candidateVersions = getCandidateVersions(
     ageEligibleVersions,
@@ -274,30 +277,51 @@ const processUpdateTarget = async (
     return
   }
 
-  const targetUpdate = candidateVersions.reduce<TargetUpdate | null>(
-    (selected, candidateVersion) => {
-      if (selected !== null) return selected
+  let targetUpdate: TargetUpdate | null = null
+  let peerConflict = false
+  for (const candidateVersion of candidateVersions) {
       const updateType = getUpdateType(parsed.version, candidateVersion)
       if (
-        !isVersionAllowedByRenovateConfig(
-          renovateConfig,
+        !isVersionAllowedByConfig(
+          dependencyConfig,
           name,
           candidateVersion.version,
           section
         ) ||
-        shouldSkipUpdate(renovateConfig, name, updateType, level, section)
+        shouldSkipUpdate(dependencyConfig, name, updateType, level, section)
       ) {
-        return null
+        continue
       }
-      return { version: candidateVersion.version, updateType }
-    },
-    null
-  )
+      if (peerStrategy === "strict") {
+        const candidatePackageJson = structuredClone(packageJson)
+        const candidateDependencies = getDependencyRecord(
+          candidatePackageJson,
+          section
+        )
+        if (candidateDependencies === null) continue
+        candidateDependencies[name] = `${parsed.prefix}${candidateVersion.version}`
+        candidatePackageJson[section] = candidateDependencies
+        if (spinner) {
+          spinner.text = `Checking peer deps and node engines for ${name}`
+        }
+        const peerResult = await checkPeerDependencies(candidatePackageJson, {
+          quiet: true
+        })
+        if (!peerResult.valid) {
+          peerConflict = true
+          continue
+        }
+      }
+      targetUpdate = { version: candidateVersion.version, updateType }
+      break
+  }
   if (targetUpdate === null) {
-    renovateExcluded.push({
+    configExcluded.push({
       section,
       name,
-      reason: "No eligible update allowed by renovate rules"
+      reason: peerConflict
+        ? "No eligible update satisfies peer dependencies"
+        : "No eligible update allowed by configured rules"
     })
     return
   }
@@ -333,10 +357,12 @@ export const updatePackageJsonDependencies = async (
   const packageJson = await readPackageJson(packageJsonPath, {
     quiet: options.quiet
   })
-  const renovateConfig = await readRenovateConfig(cwd)
+  const dependencyConfig = options.dependencyConfig !== undefined
+    ? options.dependencyConfig
+    : await readDependencyConfig(cwd, { log: options.configLog })
   const updated: PackageChange[] = []
   const skipped: SkipInfo[] = []
-  const renovateExcluded: SkipInfo[] = []
+  const configExcluded: SkipInfo[] = []
   const releaseAgeWarnings: SkipInfo[] = []
   const releaseAgeErrors: SkipInfo[] = []
 
@@ -352,8 +378,8 @@ export const updatePackageJsonDependencies = async (
         name,
         currentSpec,
         parsed: parseSupportedSpec(currentSpec),
-        disabled: isPackageIgnoredOrDisabledByRenovateConfig(
-          renovateConfig,
+        disabled: isPackageIgnoredOrDisabledByConfig(
+          dependencyConfig,
           name,
           section
         )
@@ -361,9 +387,9 @@ export const updatePackageJsonDependencies = async (
     }
   )
   const allPackages = dependencyTargets.map(target => target.name)
-  const minimumReleaseAge = renovateConfig?.minimumReleaseAge ?? "1 day"
-  const minimumReleaseAgeBehaviour =
-    renovateConfig?.minimumReleaseAgeBehaviour ?? "timestamp-required"
+  const minimumReleaseAge = dependencyConfig?.minimumReleaseAge ?? false
+  const minimumReleaseAgeBehavior =
+    dependencyConfig?.minimumReleaseAgeBehavior ?? "timestamp-optional"
   const minimumAge = parseMinimumReleaseAge(minimumReleaseAge)
   const now = Date.now()
   const spinner = options.quiet
@@ -400,7 +426,7 @@ export const updatePackageJsonDependencies = async (
       processedPackageCount += 1
       await processUpdateTarget(target, {
         packageJson,
-        renovateConfig,
+        dependencyConfig: dependencyConfig,
         metadataCache,
         cwd,
         level,
@@ -408,7 +434,7 @@ export const updatePackageJsonDependencies = async (
         noUpdate,
         skip,
         minimumReleaseAge,
-        minimumReleaseAgeBehaviour,
+        minimumReleaseAgeBehavior,
         minimumAge,
         now,
         allPackages,
@@ -416,9 +442,10 @@ export const updatePackageJsonDependencies = async (
         spinner,
         updated,
         skipped,
-        renovateExcluded,
+        configExcluded,
         releaseAgeWarnings,
-        releaseAgeErrors
+        releaseAgeErrors,
+        peerStrategy: dependencyConfig?.peerDependencies?.strategy ?? "ignore"
       })
     }
 
@@ -447,10 +474,10 @@ export const updatePackageJsonDependencies = async (
       packageJsonPath,
       updated,
       skipped,
-      renovateExcluded,
+      configExcluded: configExcluded,
       releaseAgeWarnings,
       releaseAgeErrors,
-      minimumReleaseAge: renovateConfig?.minimumReleaseAge ?? "1 day"
+      minimumReleaseAge: dependencyConfig?.minimumReleaseAge ?? false
     }
   } catch (error) {
     spinner?.fail("Package update scan failed")
@@ -501,6 +528,14 @@ export const hasMandatoryUpdates = async (
     throw new Error(`Invalid update level: ${level}`)
   }
 
+  const dependencyConfig = overrideOptions.dependencyConfig !== undefined
+    ? overrideOptions.dependencyConfig
+    : await readDependencyConfig(overrideOptions.cwd ?? process.cwd(), { log: overrideOptions.configLog })
+  const configuredMandatory = dependencyConfig?.mandatoryUpdates
+  const effectiveLevel = level === UpdateLevel.Minor && configuredMandatory?.level !== undefined
+    ? configuredMandatory.level
+    : level
+  const effectiveAuditCheckLevel = auditCheckLevel ?? configuredMandatory?.minSeverity
   let dryRun = overrideOptions.dryRun ?? true
   if (overrideOptions.fix) {
     dryRun = false
@@ -508,7 +543,7 @@ export const hasMandatoryUpdates = async (
 
   const updateResult = await updatePackageJsonDependencies({
     ...overrideOptions,
-    level,
+    level: effectiveLevel,
     dryRun,
     quiet: overrideOptions.quiet
   })
@@ -524,15 +559,15 @@ export const hasMandatoryUpdates = async (
     }
 
     const updateType = getUpdateType(from, to)
-    return UPDATE_LEVEL_RANK[updateType] >= UPDATE_LEVEL_RANK[level]
+    return UPDATE_LEVEL_RANK[updateType] >= UPDATE_LEVEL_RANK[effectiveLevel]
   })
 
   let vulnerabilities: Vulnerability[] = []
-  if (auditCheckLevel !== undefined) {
+  if (effectiveAuditCheckLevel !== undefined) {
     if (overrideOptions.fix) {
       const fixResult = await fixVulnerabilities({
         cwd: overrideOptions.cwd,
-        minSeverity: auditCheckLevel,
+        minSeverity: effectiveAuditCheckLevel,
         dryRun: false,
         quiet: overrideOptions.quiet
       })
@@ -540,7 +575,7 @@ export const hasMandatoryUpdates = async (
     } else {
       const auditResult = await checkVulnerabilities({
         cwd: overrideOptions.cwd,
-        minSeverity: auditCheckLevel,
+        minSeverity: effectiveAuditCheckLevel,
         quiet: overrideOptions.quiet
       })
       vulnerabilities = auditResult.vulnerabilities
@@ -550,7 +585,7 @@ export const hasMandatoryUpdates = async (
   if (mandatoryUpdates.length > 0 || vulnerabilities.length > 0) {
     return {
       message: getErrorMessageForMandatoryUpdates(
-        level,
+        effectiveLevel,
         mandatoryUpdates.length,
         vulnerabilities.length
       ),
@@ -561,7 +596,7 @@ export const hasMandatoryUpdates = async (
   }
 
   return {
-    message: getPassedMessageForMandatoryUpdates(level),
+    message: getPassedMessageForMandatoryUpdates(effectiveLevel),
     hasMandatoryUpdates: false,
     updated: []
   }

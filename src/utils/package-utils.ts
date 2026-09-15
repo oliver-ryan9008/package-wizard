@@ -232,7 +232,7 @@ export const filterVersionsByReleaseAge = (
   releaseTimes: Record<string, string>,
   minimumReleaseAge: string | number | false,
   now = Date.now(),
-  behaviour: "timestamp-required" | "timestamp-optional" = "timestamp-required"
+  Behavior: "timestamp-required" | "timestamp-optional" = "timestamp-required"
 ): string[] => {
   const minimumAge = parseMinimumReleaseAge(minimumReleaseAge)
   return filterVersionsByReleaseAgeMs(
@@ -240,7 +240,7 @@ export const filterVersionsByReleaseAge = (
     releaseTimes,
     minimumAge,
     now,
-    behaviour
+    Behavior
   )
 }
 
@@ -249,14 +249,14 @@ const filterVersionsByReleaseAgeMs = (
   releaseTimes: Record<string, string>,
   minimumAge: number,
   now: number,
-  behaviour: "timestamp-required" | "timestamp-optional"
+  Behavior: "timestamp-required" | "timestamp-optional"
 ): string[] => {
   const cutoff = now - minimumAge
 
   return versions.filter(version => {
     const publishedAt = Date.parse(releaseTimes[version] ?? "")
     if (!Number.isFinite(publishedAt)) {
-      return behaviour === "timestamp-optional"
+      return Behavior === "timestamp-optional"
     }
 
     return Number.isFinite(publishedAt) && publishedAt <= cutoff

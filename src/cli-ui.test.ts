@@ -1,10 +1,16 @@
 import { existsSync, readFileSync } from "node:fs"
 import {
   getInstallCommand,
+  printAuditResult,
   printShellCompletion,
   printUpdateResult
 } from "./cli-ui"
-import { CliCommand, CliOptions, UpdateResult } from "./types"
+import {
+  CliCommand,
+  CliOptions,
+  UpdateResult,
+  VulnerabilityFixResult
+} from "./types"
 import {
   formatColumns,
   generalLogger,
@@ -89,7 +95,7 @@ const result: UpdateResult = {
       reason: "Skipped via --skip"
     }
   ],
-  renovateExcluded: []
+  configExcluded: []
 }
 
 describe("cli-ui", () => {
@@ -127,9 +133,9 @@ describe("cli-ui", () => {
   it("renders grouped preview changes and compact skipped summary", () => {
     expect(printUpdateResult(result, previewOptions)).toBe(2)
 
-    expect(mockedInfoLogger).toHaveBeenCalledWith(
-      "Scan complete: 2 changes, 1 package skipped."
-    )
+    expect(mockedInfoLogger).toHaveBeenCalledWith("Scan complete")
+    expect(mockedGeneralLogger).toHaveBeenCalledWith("  Changes: 2 changes")
+    expect(mockedGeneralLogger).toHaveBeenCalledWith("  Skipped: 1 package")
     expect(mockedInfoLogger).toHaveBeenCalledWith("Production dependencies (1)")
     expect(mockedInfoLogger).toHaveBeenCalledWith(
       "Development dependencies (1)"
@@ -145,6 +151,45 @@ describe("cli-ui", () => {
 
     expect(mockedInfoLogger).toHaveBeenCalledWith("Skipped packages (1)")
     expect(mockedGeneralLogger).toHaveBeenCalledWith("formatted rows")
+  })
+
+  it("renders audit vulnerabilities as spaced detail records", () => {
+    const auditResult: VulnerabilityFixResult = {
+      packageJsonPath: "/repo/package.json",
+      vulnerabilities: [
+        {
+          name: "brace-expansion",
+          severity: "high",
+          isDirect: false,
+          range: "<=1.1.17",
+          titles: ["Denial of service"],
+          fixAvailable: false,
+          dependencyChain: "root\nbrace-expansion"
+        },
+        {
+          name: "browserslist",
+          severity: "moderate",
+          isDirect: true,
+          range: "<=4.28.6",
+          titles: [],
+          fixAvailable: { version: "4.29.0", isSemVerMajor: false }
+        }
+      ],
+      fixed: [],
+      skipped: []
+    }
+
+    printAuditResult(auditResult, { ...previewOptions, command: CliCommand.Audit })
+
+    const output = mockedGeneralLogger.mock.calls
+      .map(([message]) => message)
+      .find(message => message.includes("brace-expansion"))
+    expect(output).toContain("  Issue: Denial of service")
+    expect(output).toContain("  Vulnerable range: <=1.1.17")
+    expect(output).toContain("  Fix: unavailable")
+    expect(output).toContain("  Dependency chain: root -> brace-expansion")
+    expect(output).toContain("\n\n")
+    expect(output).toContain("browserslist")
   })
 
   it("prints shell completion scripts without visual logger output", () => {

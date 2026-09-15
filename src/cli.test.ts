@@ -30,7 +30,11 @@ import {
   setColorMode,
   warnLogger
 } from "./logging-utils/logger"
-import { promptForApply, promptForCommand } from "./cli-menu"
+import {
+  promptForAcknowledge,
+  promptForApply,
+  promptForCommand
+} from "./cli-menu"
 import {
   printAuditResult,
   printMandatoryCheckResult,
@@ -64,6 +68,7 @@ jest.mock("./logging-utils/logger", () => ({
 }))
 
 jest.mock("./cli-menu", () => ({
+  promptForAcknowledge: jest.fn(),
   promptForApply: jest.fn(),
   promptForCommand: jest.fn()
 }))
@@ -102,6 +107,9 @@ const mockedWarnLogger = warnLogger as jest.MockedFunction<typeof warnLogger>
 const mockedPromptForApply = promptForApply as jest.MockedFunction<
   typeof promptForApply
 >
+const mockedPromptForAcknowledge = promptForAcknowledge as jest.MockedFunction<
+  typeof promptForAcknowledge
+>
 const mockedPromptForCommand = promptForCommand as jest.MockedFunction<
   typeof promptForCommand
 >
@@ -126,7 +134,7 @@ const updateResult: UpdateResult = {
   packageJsonPath: "/repo/package.json",
   updated: [],
   skipped: [],
-  renovateExcluded: []
+  configExcluded: []
 }
 
 const auditResult: VulnerabilityFixResult = {
@@ -174,6 +182,7 @@ describe("cli", () => {
     mockedCheckForHelpOptions.mockReturnValue(false)
     mockedPromptForCommand.mockResolvedValue([CliCommand.Update])
     mockedPromptForApply.mockResolvedValue(false)
+    mockedPromptForAcknowledge.mockResolvedValue(true)
     mockedGetDependencyChain.mockResolvedValue("root -> indirect-package")
     mockedUpdatePackageJsonDependencies.mockResolvedValue(updateResult)
     mockedFixVulnerabilities.mockResolvedValue(auditResult)
@@ -274,6 +283,9 @@ describe("cli", () => {
       expect(parseArgs(["update", "-y"])).toEqual(
         expect.objectContaining({ dryRun: false, apply: true })
       )
+      expect(parseArgs(["update", "--check-peer-deps"])).toEqual(
+        expect.objectContaining({ checkPeerDeps: true })
+      )
     })
 
     it("parses command-specific completion output", () => {
@@ -300,6 +312,9 @@ describe("cli", () => {
       )
       expect(() => parseArgs(["update", "--show-dep-chain"])).toThrow(
         "--show-dep-chain can only be used with audit"
+      )
+      expect(() => parseArgs(["pin", "--check-peer-deps"])).toThrow(
+        "--check-peer-deps can only be used with update"
       )
       expect(() => parseArgs(["audit", "--level", "minor"])).toThrow(
         "--level can only be used with update, check, or pin"
@@ -416,6 +431,26 @@ describe("cli", () => {
   })
 
   describe("command dispatch", () => {
+    it("pauses after interactive mandatory checks until acknowledged", async () => {
+      mockedPromptForCommand
+        .mockResolvedValueOnce([CliCommand.Check])
+        .mockResolvedValueOnce(null)
+
+      await run(createDependencies())
+
+      expect(mockedPromptForAcknowledge).toHaveBeenCalledTimes(1)
+    })
+
+    it("pauses after interactive audits until acknowledged", async () => {
+      mockedPromptForCommand
+        .mockResolvedValueOnce([CliCommand.Audit])
+        .mockResolvedValueOnce(null)
+
+      await run(createDependencies())
+
+      expect(mockedPromptForAcknowledge).toHaveBeenCalledTimes(1)
+    })
+
     it("runs update as a preview by default", async () => {
       process.argv = ["node", "cli.js", "update"]
       const dependencies = createDependencies()
@@ -435,6 +470,21 @@ describe("cli", () => {
         expect.objectContaining({ command: CliCommand.Update })
       )
       expect(mockedSetColorMode).toHaveBeenCalledWith(ColorMode.Auto)
+    })
+
+    it("enables strict peer checks for one update run", async () => {
+      process.argv = ["node", "cli.js", "update", "--check-peer-deps"]
+      const dependencies = createDependencies()
+
+      await run(dependencies)
+
+      expect(dependencies.updatePackageJsonDependencies).toHaveBeenCalledWith(
+        expect.objectContaining({
+          dependencyConfig: expect.objectContaining({
+            peerDependencies: { strategy: "strict" }
+          })
+        })
+      )
     })
 
     it("keeps JSON command output free of human renderers", async () => {

@@ -15,6 +15,7 @@ Running without arguments opens guided interactive mode. It requires a TTY.
 | --- | --- | --- |
 | `update` | Preview eligible dependency updates. | No |
 | `audit` | Review npm audit vulnerabilities and available fixes. | No |
+| `peer-check` | Check dependency peer and Node.js/npm engine compatibility using npm's resolver. | Never |
 | `check` | Enforce required maintenance in CI. Exits `2` when maintenance is required. | Never |
 | `pin` | Preview exact dependency version ranges. | No |
 | `about` | Show tool information. | Never |
@@ -22,12 +23,40 @@ Running without arguments opens guided interactive mode. It requires a TTY.
 
 `--apply` writes `package.json` for `update`, `audit`, and `pin` after the command has been reviewed. In guided mode, the same action requires a confirmation after the preview result.
 
+## Configuration
+
+The CLI discovers native package-wizard configuration first, in this order:
+`package.wizard.ts`, `package.wizard.mjs`, `package.wizard.js`, and
+`package.wizard.json`. The first native file found is authoritative. If no
+native file exists, fallback discovery checks `renovate.json`, `.ncurc.json`,
+then `.github/dependabot.yml`.
+
+Native configuration supports `ignore`, `defaults`, wildcard-capable
+`packages`, ordered `rules`, `audit`, `peerDependencies`, and `mandatoryUpdates`. Policy fields include `enabled`,
+`allowedVersions`, `ignoreUnstable`, `respectLatest`,
+`updatePinnedDependencies`, `minimumReleaseAge`, `minimumReleaseAgeBehavior`,
+`enabledUpdateTypes`, `disabledUpdateTypes`, and `matchDepTypes`. Native
+configuration uses `enabledUpdateTypes` and `disabledUpdateTypes` for update
+levels; `matchUpdateTypes` is only supported in fallback configuration.
+The `audit` section configures `minSeverity`, `showDepChain`, and
+`vulnerabilityFixStrategy`. The `mandatoryUpdates` section configures `level`
+and `minSeverity`. Set `peerDependencies.strategy` to `strict` to reject
+update candidates that npm reports as peer- or engine-incompatible; it
+defaults to `ignore`. The update-only `--check-peer-deps` option enables strict
+checking for one run and overrides the configured strategy. Explicit CLI
+options override these configuration values.
+
+See [package overview](package-overview.md) for complete examples and native
+configuration validation rules. When a config file is selected, verbose human
+output identifies its basename. `--json` results remain machine-readable.
+
 ## Update and pin options
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--level <patch\|minor\|major>` | `minor` | Maximum update level. `patch` permits patch changes, `minor` permits patch and minor changes, and `major` permits any newer stable version. |
+| `--level <all\|patch\|minor\|major>` | `minor` | Maximum update level. `patch` permits patch changes, `minor` permits patch and minor changes, and `major` or `all` permits any newer stable version. |
 | `--skip <packages>` | none | Skip comma-separated packages. Repeat this option to add more packages. |
+| `--check-peer-deps` | off | Reject candidate updates with incompatible peer dependencies or Node.js/npm `engines`. |
 | `--no-update` | off | With `pin` only, remove version prefixes without fetching newer versions. |
 | `-n`, `--dry-run` | on | Explicit preview marker. Every change-capable command previews by default. |
 | `-y`, `--apply` | off | Write reviewed changes to `package.json`. |
@@ -38,6 +67,7 @@ Examples:
 ```bash
 package-wizard update --level patch
 package-wizard update --skip react,lodash --skip typescript
+package-wizard update --check-peer-deps
 package-wizard update --level major --apply
 package-wizard pin --no-update
 package-wizard pin --apply
@@ -59,11 +89,23 @@ package-wizard audit --apply
 
 `--skip` and `--level` do not apply to audit mode and are rejected with an actionable error.
 
+When strict peer checking is enabled, each candidate is tested through npm's
+resolver with strict peer and engine checks. npm evaluates dependency
+`engines.node` and `engines.npm` against the current runtime. The updater can
+try older candidates for the same package when a newer candidate fails, but it
+does not globally backtrack and reselect earlier packages.
+
+The standalone command checks the current dependency set:
+
+```bash
+package-wizard peer-check
+```
+
 ## Check options
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--level <patch\|minor\|major>` | `minor` | Update level that becomes mandatory. |
+| `--level <all\|patch\|minor\|major>` | `minor` | Update level that becomes mandatory. `all` includes patch, minor, and major updates. |
 | `--min-severity <level>` | none | Also fail for vulnerabilities at or above this severity. |
 
 ```bash
@@ -117,6 +159,28 @@ package-wizard completion fish
 ```
 
 Install the resulting script using your shell's normal completion setup.
+
+For the current session, evaluate the generated script:
+
+```bash
+source <(package-wizard completion bash)
+source <(package-wizard completion zsh)
+package-wizard completion fish | source
+```
+
+For persistent setup, add the Bash or Zsh command to `~/.bashrc` or `~/.zshrc`:
+
+```bash
+eval "$(package-wizard completion bash)"
+eval "$(package-wizard completion zsh)"
+```
+
+Save Fish completion definitions under Fish's completion directory:
+
+```fish
+mkdir -p ~/.config/fish/completions
+package-wizard completion fish > ~/.config/fish/completions/package-wizard.fish
+```
 
 ## Output and exit codes
 
