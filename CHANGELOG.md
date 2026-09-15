@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/oliver-ryan9008/package-wizard/compare/v1.3.0...v1.4.0) (2026-09-15)
+
+
+### Features
+
+* Complete rework and feature overhaul ([b70914f](https://github.com/oliver-ryan9008/package-wizard/commit/b70914fd03097dc9d3b7285914ff3f97876ff567))
+
 # [1.3.0](https://github.com/oliver-ryan9008/package-wizard/compare/v1.2.2...v1.3.0) (2026-09-14)
 
 
