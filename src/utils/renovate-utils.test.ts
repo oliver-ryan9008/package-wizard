@@ -1,4 +1,4 @@
-import type { RenovateConfig, RenovatePackageRule } from "../types"
+import type { DependencyConfig, DependencyRule } from "../types"
 import {
   doesRuleMatch,
   doesRuleMatchUpdateType,
@@ -6,19 +6,19 @@ import {
   getMatchingPackageRules,
   hasExplicitAllowRules,
   isPackageDisabledByMatchingRules,
-  isPackageDisabledByRenovateConfig,
-  isPackageIgnoredByRenovateConfig,
+  isPackageDisabledByConfig,
+  isPackageIgnoredByConfig,
   isUpdateBlockedByDisabledRules,
   isUpdateBlockedByExplicitAllowRules,
   isUpdateDisabledByMatchingRules,
-  isUpdateDisabledByRenovateConfig,
+  isUpdateDisabledByConfig,
   isUpdateWithinRequestedLevel,
-  isVersionAllowedByRenovateConfig,
+  isVersionAllowedByConfig,
   packageMatchesRule,
-  shouldIgnoreUnstableByRenovateConfig,
-  shouldRespectLatestByRenovateConfig,
+  shouldIgnoreUnstableByConfig,
+  shouldRespectLatestByConfig,
   shouldSkipUpdate,
-  shouldUpdatePinnedDependencyByRenovateConfig
+  shouldUpdatePinnedDependencyByConfig
 } from "./renovate-utils"
 
 describe("renovate-utils", () => {
@@ -167,7 +167,7 @@ describe("renovate-utils", () => {
 
   describe("getMatchingPackageRules", () => {
     it("returns only matching rules", () => {
-      const config: RenovateConfig = {
+      const config: DependencyConfig = {
         packageRules: [
           {
             matchPackageNames: ["react"]
@@ -228,7 +228,7 @@ describe("renovate-utils", () => {
   describe("isPackageDisabledByRenovateConfig", () => {
     it("returns true when matching package disabled rule exists", () => {
       expect(
-        isPackageDisabledByRenovateConfig(
+        isPackageDisabledByConfig(
           {
             packageRules: [
               {
@@ -245,7 +245,7 @@ describe("renovate-utils", () => {
 
     it("returns false when package is not matched", () => {
       expect(
-        isPackageDisabledByRenovateConfig(
+        isPackageDisabledByConfig(
           {
             packageRules: [
               {
@@ -264,7 +264,7 @@ describe("renovate-utils", () => {
   describe("isVersionAllowedByRenovateConfig", () => {
     it("allows versions inside configured range", () => {
       expect(
-        isVersionAllowedByRenovateConfig(
+        isVersionAllowedByConfig(
           {
             packageRules: [
               { matchPackageNames: ["react"], allowedVersions: ">=18 <20" }
@@ -279,7 +279,7 @@ describe("renovate-utils", () => {
 
     it("blocks versions outside configured range", () => {
       expect(
-        isVersionAllowedByRenovateConfig(
+        isVersionAllowedByConfig(
           {
             packageRules: [
               { matchPackageNames: ["react"], allowedVersions: "<19" }
@@ -294,7 +294,7 @@ describe("renovate-utils", () => {
 
     it("supports positive regex rules", () => {
       expect(
-        isVersionAllowedByRenovateConfig(
+        isVersionAllowedByConfig(
           { packageRules: [{ allowedVersions: "/^2\\./" }] },
           "react",
           "2.1.0",
@@ -305,7 +305,7 @@ describe("renovate-utils", () => {
 
     it("rejects versions that do not match regex rules", () => {
       expect(
-        isVersionAllowedByRenovateConfig(
+        isVersionAllowedByConfig(
           { packageRules: [{ allowedVersions: "/^2\\./" }] },
           "react",
           "1.9.0",
@@ -316,7 +316,7 @@ describe("renovate-utils", () => {
 
     it("throws for invalid allowed-version regex", () => {
       expect(() =>
-        isVersionAllowedByRenovateConfig(
+        isVersionAllowedByConfig(
           { packageRules: [{ allowedVersions: "/[/" }] },
           "react",
           "1.0.0",
@@ -329,13 +329,13 @@ describe("renovate-utils", () => {
   describe("Renovate policy defaults and overrides", () => {
     it("ignores packages listed in ignoreDeps", () => {
       expect(
-        isPackageIgnoredByRenovateConfig({ ignoreDeps: ["react"] }, "react")
+        isPackageIgnoredByConfig({ ignoreDeps: ["react"] }, "react")
       ).toBe(true)
-      expect(isPackageIgnoredByRenovateConfig(null, "react")).toBe(false)
+      expect(isPackageIgnoredByConfig(null, "react")).toBe(false)
     })
 
     it("uses root defaults and matching package-rule overrides", () => {
-      const config: RenovateConfig = {
+      const config: DependencyConfig = {
         ignoreUnstable: false,
         respectLatest: false,
         updatePinnedDependencies: false,
@@ -350,26 +350,26 @@ describe("renovate-utils", () => {
       }
 
       expect(
-        shouldIgnoreUnstableByRenovateConfig(config, "react", "dependencies")
+        shouldIgnoreUnstableByConfig(config, "react", "dependencies")
       ).toBe(true)
       expect(
-        shouldRespectLatestByRenovateConfig(config, "react", "dependencies")
+        shouldRespectLatestByConfig(config, "react", "dependencies")
       ).toBe(true)
       expect(
-        shouldUpdatePinnedDependencyByRenovateConfig(
+        shouldUpdatePinnedDependencyByConfig(
           config,
           "react",
           "dependencies"
         )
       ).toBe(true)
       expect(
-        shouldIgnoreUnstableByRenovateConfig(config, "lodash", "dependencies")
+        shouldIgnoreUnstableByConfig(config, "lodash", "dependencies")
       ).toBe(false)
       expect(
-        shouldRespectLatestByRenovateConfig(null, "lodash", "dependencies")
+        shouldRespectLatestByConfig(null, "lodash", "dependencies")
       ).toBe(true)
       expect(
-        shouldUpdatePinnedDependencyByRenovateConfig(
+        shouldUpdatePinnedDependencyByConfig(
           null,
           "lodash",
           "dependencies"
@@ -379,7 +379,7 @@ describe("renovate-utils", () => {
   })
 
   describe("explicit allow rules", () => {
-    const rules: RenovatePackageRule[] = [
+    const rules: DependencyRule[] = [
       {
         enabled: true,
         matchUpdateTypes: ["patch", "minor"]
@@ -406,7 +406,7 @@ describe("renovate-utils", () => {
   })
 
   describe("disabled update type rules", () => {
-    const rules: RenovatePackageRule[] = [
+    const rules: DependencyRule[] = [
       {
         enabled: false,
         matchUpdateTypes: ["major"]
@@ -473,7 +473,7 @@ describe("renovate-utils", () => {
   describe("isUpdateDisabledByRenovateConfig", () => {
     it("evaluates matching rules only", () => {
       expect(
-        isUpdateDisabledByRenovateConfig(
+        isUpdateDisabledByConfig(
           {
             packageRules: [
               {

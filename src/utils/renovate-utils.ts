@@ -1,16 +1,16 @@
 import { hasItems } from "./generic-utils"
 import {
   DependencySection,
-  RenovateConfig,
-  RenovatePackageRule,
+  DependencyConfig,
+  DependencyRule,
   UPDATE_LEVEL_RANK,
   UpdateLevel
 } from "../types"
 import semver from "semver"
 
-const packagePatternCache = new WeakMap<RenovatePackageRule, RegExp[]>()
+const packagePatternCache = new WeakMap<DependencyRule, RegExp[]>()
 
-const getPackagePatterns = (rule: RenovatePackageRule): RegExp[] => {
+const getPackagePatterns = (rule: DependencyRule): RegExp[] => {
   const cached = packagePatternCache.get(rule)
   if (cached) {
     return cached
@@ -38,7 +38,7 @@ export const isUpdateWithinRequestedLevel = (
 }
 
 export const doesRuleMatchUpdateType = (
-  rule: RenovatePackageRule,
+  rule: DependencyRule,
   updateType: UpdateLevel
 ): boolean => {
   if (!rule.matchUpdateTypes?.length) {
@@ -51,7 +51,7 @@ export const doesRuleMatchUpdateType = (
 export const packageMatchesRule = (
   name: string,
   section: DependencySection,
-  rule: RenovatePackageRule
+  rule: DependencyRule
 ): boolean => {
   if (rule.matchDepTypes?.length) {
     if (!rule.matchDepTypes.includes(section)) {
@@ -88,7 +88,7 @@ export const packageMatchesRule = (
 }
 
 export const doesRuleMatch = (
-  rule: RenovatePackageRule,
+  rule: DependencyRule,
   packageName: string,
   updateType: UpdateLevel,
   section: DependencySection
@@ -100,10 +100,10 @@ export const doesRuleMatch = (
 }
 
 export const getMatchingPackageRules = (
-  config: RenovateConfig | null,
+  config: DependencyConfig | null,
   packageName: string,
   section: DependencySection
-): RenovatePackageRule[] => {
+): DependencyRule[] => {
   return (config?.packageRules ?? []).filter(rule =>
     packageMatchesRule(packageName, section, rule)
   )
@@ -119,7 +119,7 @@ export const getMatchingPackageRules = (
  * }
  */
 export const isPackageDisabledByMatchingRules = (
-  rules: RenovatePackageRule[]
+  rules: DependencyRule[]
 ): boolean => {
   return rules.some(
     rule =>
@@ -128,8 +128,8 @@ export const isPackageDisabledByMatchingRules = (
   )
 }
 
-export const isPackageDisabledByRenovateConfig = (
-  config: RenovateConfig | null,
+export const isPackageDisabledByConfig = (
+  config: DependencyConfig | null,
   packageName: string,
   section: DependencySection
 ): boolean => {
@@ -138,8 +138,8 @@ export const isPackageDisabledByRenovateConfig = (
   return isPackageDisabledByMatchingRules(rules)
 }
 
-export const isPackageIgnoredByRenovateConfig = (
-  config: RenovateConfig | null,
+export const isPackageIgnoredByConfig = (
+  config: DependencyConfig | null,
   packageName: string
 ): boolean => {
   return config?.ignoreDeps?.includes(packageName) ?? false
@@ -157,8 +157,8 @@ const matchesAllowedVersions = (version: string, allowedVersions: string) => {
   return semver.satisfies(version, allowedVersions)
 }
 
-export const isVersionAllowedByRenovateConfig = (
-  config: RenovateConfig | null,
+export const isVersionAllowedByConfig = (
+  config: DependencyConfig | null,
   packageName: string,
   version: string,
   section: DependencySection
@@ -171,19 +171,19 @@ export const isVersionAllowedByRenovateConfig = (
   )
 }
 
-export const isPackageIgnoredOrDisabledByRenovateConfig = (
-  config: RenovateConfig | null,
+export const isPackageIgnoredOrDisabledByConfig = (
+  config: DependencyConfig | null,
   packageName: string,
   section: DependencySection
 ): boolean => {
   return (
-    isPackageIgnoredByRenovateConfig(config, packageName) ||
-    isPackageDisabledByRenovateConfig(config, packageName, section)
+    isPackageIgnoredByConfig(config, packageName) ||
+    isPackageDisabledByConfig(config, packageName, section)
   )
 }
 
-export const shouldIgnoreUnstableByRenovateConfig = (
-  config: RenovateConfig | null,
+export const shouldIgnoreUnstableByConfig = (
+  config: DependencyConfig | null,
   packageName: string,
   section: DependencySection
 ): boolean => {
@@ -195,8 +195,8 @@ export const shouldIgnoreUnstableByRenovateConfig = (
   return matchingRule?.ignoreUnstable ?? config?.ignoreUnstable ?? true
 }
 
-export const shouldRespectLatestByRenovateConfig = (
-  config: RenovateConfig | null,
+export const shouldRespectLatestByConfig = (
+  config: DependencyConfig | null,
   packageName: string,
   section: DependencySection
 ): boolean => {
@@ -208,8 +208,8 @@ export const shouldRespectLatestByRenovateConfig = (
   return matchingRule?.respectLatest ?? config?.respectLatest ?? true
 }
 
-export const shouldUpdatePinnedDependencyByRenovateConfig = (
-  config: RenovateConfig | null,
+export const shouldUpdatePinnedDependencyByConfig = (
+  config: DependencyConfig | null,
   packageName: string,
   section: DependencySection
 ): boolean => {
@@ -226,7 +226,7 @@ export const shouldUpdatePinnedDependencyByRenovateConfig = (
 }
 
 export const hasExplicitAllowRules = (
-  rules: RenovatePackageRule[]
+  rules: DependencyRule[]
 ): boolean => {
   return rules.some(
     rule => rule.enabled === true && (rule.matchUpdateTypes?.length ?? 0) > 0
@@ -234,7 +234,7 @@ export const hasExplicitAllowRules = (
 }
 
 export const getExplicitlyAllowedUpdateTypes = (
-  rules: RenovatePackageRule[]
+  rules: DependencyRule[]
 ): Set<UpdateLevel> => {
   const allowedUpdateTypes = new Set<UpdateLevel>()
 
@@ -252,7 +252,7 @@ export const getExplicitlyAllowedUpdateTypes = (
 }
 
 export const isUpdateBlockedByExplicitAllowRules = (
-  rules: RenovatePackageRule[],
+  rules: DependencyRule[],
   updateType: UpdateLevel
 ): boolean => {
   if (!hasExplicitAllowRules(rules)) {
@@ -265,7 +265,7 @@ export const isUpdateBlockedByExplicitAllowRules = (
 }
 
 export const isUpdateBlockedByDisabledRules = (
-  rules: RenovatePackageRule[],
+  rules: DependencyRule[],
   updateType: UpdateLevel
 ): boolean => {
   return rules.some(
@@ -277,7 +277,7 @@ export const isUpdateBlockedByDisabledRules = (
 }
 
 export const isUpdateDisabledByMatchingRules = (
-  rules: RenovatePackageRule[],
+  rules: DependencyRule[],
   updateType: UpdateLevel
 ): boolean => {
   if (rules.length === 0) {
@@ -295,8 +295,8 @@ export const isUpdateDisabledByMatchingRules = (
   return false
 }
 
-export const isUpdateDisabledByRenovateConfig = (
-  config: RenovateConfig | null,
+export const isUpdateDisabledByConfig = (
+  config: DependencyConfig | null,
   packageName: string,
   updateType: UpdateLevel,
   section: DependencySection
@@ -307,7 +307,7 @@ export const isUpdateDisabledByRenovateConfig = (
 }
 
 export const shouldSkipUpdate = (
-  config: RenovateConfig | null,
+  config: DependencyConfig | null,
   packageName: string,
   updateType: UpdateLevel,
   requestedUpdateLevel: UpdateLevel,
@@ -317,7 +317,7 @@ export const shouldSkipUpdate = (
     return true
   }
 
-  return isUpdateDisabledByRenovateConfig(
+  return isUpdateDisabledByConfig(
     config,
     packageName,
     updateType,

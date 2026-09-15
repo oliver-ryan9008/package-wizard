@@ -7,7 +7,12 @@ It can be used as either:
 - A command-line tool run from an npm script or with `npx`.
 - A TypeScript/JavaScript library imported into another script.
 
-Point it at a project and it reads that project's `package.json`. Depending on the command, it can preview patch, minor, or major updates, review `npm audit` fixes, check for required updates, or preview pinned dependency versions. `--apply` writes reviewed changes. It also understands `renovate.json`, so packages intentionally excluded there stay excluded during normal updates and audit fixes.
+Point it at a project and it reads that project's `package.json`. Depending on the command, it can preview patch, minor, or major updates, review `npm audit` fixes, check for required updates, or preview pinned dependency versions. `--apply` writes reviewed changes. It understands native `package.wizard.*` configuration, `renovate.json`, npm-check-updates' `.ncurc.json`, and Dependabot's `.github/dependabot.yml`, so package exclusions remain consistent during normal updates and audit fixes.
+
+Peer compatibility checking is opt-in for updates. Use `--check-peer-deps` or
+set `peerDependencies.strategy` to `strict` to validate candidate updates with
+npm's resolver. Strict checks include peer dependencies and dependency
+`engines.node` and `engines.npm` constraints against the current runtime.
 
 When run without arguments in a terminal, it shows the current target
 `package.json` path before opening a guided task flow. Users choose a preview,
@@ -34,18 +39,18 @@ selecting a newer version.
 
 Tags, `workspace:`, `file:`, URL, Git, invalid, and compound range specs are
 skipped and reported. Updates are also skipped when no eligible version exists,
-when a package is excluded by `--skip`, or when Renovate rules reject the
-candidate.
+when a package is excluded by `--skip`, or when configured dependency rules
+reject the candidate.
 
 The default update level is `minor`: patch and minor updates are eligible, but
-major updates are not. `patch` allows patch updates only; `major` allows any
-newer stable version within the configured policies. Prerelease versions are
+major updates are not. `patch` allows patch updates only; `major` and `all`
+allow any newer stable version within the configured policies. Prerelease versions are
 ignored by default, and updates do not move past npm's `latest` tag by default.
 
-New versions must normally be at least one day old. Configure
-`minimumReleaseAge` in `renovate.json` with a duration such as `"3 days"`, a
-number of milliseconds, or `false` to disable the filter. Use
-`minimumReleaseAgeBehaviour: "timestamp-optional"` when releases without
+New versions are not subject to a release-age filter by default. Configure
+`minimumReleaseAge` in a supported configuration file with a duration such as
+`"3 days"`, a number of milliseconds, or `false` to disable the filter. Use
+`minimumReleaseAgeBehavior: "timestamp-optional"` when releases without
 publication timestamps should remain eligible. The result reports blocked
 versions as release-age warnings and installed versions that violate the policy
 as release-age errors.
@@ -64,12 +69,25 @@ available version is selected: `"lowest"` is the default and `"highest"`
 selects the highest available fix. `--show-dep-chain` includes the dependency
 chain for indirect vulnerabilities.
 
-## Renovate configuration
+## Dependency configuration
 
-The tool reads `renovate.json` from the target project. A missing file is valid;
-malformed JSON or invalid supported field types fail the operation.
+The tool understands native `package.wizard.*` configuration, `renovate.json`,
+npm-check-updates' `.ncurc.json`, and Dependabot's
+`.github/dependabot.yml`. It checks native files in this order:
 
-Supported settings include:
+1. `package.wizard.ts`
+2. `package.wizard.mjs`
+3. `package.wizard.js`
+4. `package.wizard.json`
+
+The first native file found is authoritative; fallback files are ignored. If no
+native file exists, the tool checks `renovate.json`, `.ncurc.json`, and
+`.github/dependabot.yml` in that order. If none exist, built-in defaults apply.
+Malformed JSON/YAML or invalid supported field types fail the operation.
+
+### Fallback configuration
+
+Fallback configuration settings include:
 
 - `ignoreDeps` to exclude named packages.
 - `allowedVersions` in package rules, using a SemVer range or `/regex/`.
@@ -77,20 +95,133 @@ Supported settings include:
 	or in matching package rules.
 - `matchPackageNames`, `matchPackagePatterns`, `matchPackagePrefixes`, and
 	`matchDepTypes` to target package rules.
-- `matchUpdateTypes` to target patch, minor, or major updates.
+- `matchUpdateTypes` to target patch, minor, or major updates in Renovate,
+  Dependabot, and other fallback configuration semantics.
 - `enabled: false` in a package rule to exclude matching packages completely.
 
-Package rules combine package and dependency-section matchers. A disabled rule
-with no matchers applies to every package. Root `enabled: false` is ignored;
-package-rule `enabled: false` is the supported exclusion mechanism.
+In fallback configs, package rules combine package and dependency-section
+matchers. A disabled rule with no matchers applies to every package. Root
+`enabled: false` is ignored; package-rule `enabled: false` is the supported
+exclusion mechanism.
+
+### Native package-wizard configuration
+
+Use `package.wizard.json` when dependency policy is owned by this tool. The
+same shape can be authored in `package.wizard.ts`, `package.wizard.mjs`, or
+`package.wizard.js` with `definePackageWizardConfig`:
+
+```json
+{
+	"$schema": "https://raw.githubusercontent.com/oliver-ryan9008/package-wizard/main/docs/schemas/package-wizard.schema.json",
+	"ignore": ["left-pad"],
+	"defaults": {
+		"minimumReleaseAge": "3 days",
+		"respectLatest": true
+	},
+	"packages": {
+		"react": { "allowedVersions": "^18" },
+		"@types/*": { "enabled": false }
+	},
+	"rules": [
+		{ "packageName": "typescript", "updatePinnedDependencies": false }
+	]
+}
+```
+
+`packageName` is the preferred selector for ordered rules. The deprecated
+`package` selector remains supported for compatibility.
+
+`packages` keys can be exact names or `*` wildcards. `rules` supports the same
+policy fields and applies in declaration order. `ignore` excludes exact package
+names. The `defaults` object supplies baseline settings; release-age settings
+belong there and are disabled when omitted. Native package-wizard rules use
+`enabled` to control all update types. Use
+`enabledUpdateTypes` to allow only selected levels, or
+`disabledUpdateTypes` to block selected levels while leaving other levels
+eligible. Each field accepts one value or an array containing `patch`,
+`minor`, `major`, and `all`. `all` expands to `patch`, `minor`, and `major`.
+
+```json
+{
+	"packages": {
+		"react": {
+			"enabled": true,
+			"disabledUpdateTypes": "major"
+		},
+		"typescript": {
+			"enabledUpdateTypes": ["patch", "minor"]
+		}
+	}
+}
+```
+
+Native rules must not use `matchUpdateTypes`; that field belongs to fallback
+Renovate configuration. The tool reports an
+actionable error when a rule overlaps enabled and disabled update types, when
+`enabled: false` is combined with `enabledUpdateTypes`, or when repeated exact
+selectors specify conflicting values. Remove the conflicting field or combine
+the policies into one rule. These validation rules apply only to native
+package-wizard files; fallback configuration semantics remain unchanged.
+
+Add the schema URL to `package.wizard.json` for editor completion and hover
+validation. The complete schema is in
+[package-wizard.schema.json](schemas/package-wizard.schema.json). Published
+installs also expose it as `package-wizard/schema.json`.
+
+```ts
+import { definePackageWizardConfig } from "package-wizard"
+
+export default definePackageWizardConfig({
+	ignore: ["left-pad"],
+	packages: {
+		"@types/*": { enabled: false }
+	}
+})
+```
+
+Audit and mandatory-update defaults can be configured separately from package
+rules. CLI flags override these values:
+
+```json
+{
+	"audit": {
+		"minSeverity": "moderate",
+		"showDepChain": true,
+		"vulnerabilityFixStrategy": "highest"
+	},
+	"mandatoryUpdates": {
+		"level": "major",
+		"minSeverity": "high"
+	},
+	"peerDependencies": {
+		"strategy": "strict"
+	}
+}
+```
+
+`audit.minSeverity` accepts `critical`, `high`, `moderate`, `low`, or `info`.
+`audit.showDepChain` controls indirect vulnerability chain output, and
+`audit.vulnerabilityFixStrategy` accepts `lowest` or `highest`.
+`mandatoryUpdates.level` accepts `all`, `patch`, `minor`, or `major`; its
+`minSeverity` uses the same severity values. These settings apply when the
+corresponding CLI option is omitted.
+`peerDependencies.strategy` accepts `ignore` or `strict` and defaults to
+`ignore`. Strict mode uses npm's resolver with `--strict-peer-deps` and
+`--engine-strict` to reject peer- or engine-incompatible update candidates.
+The update-only `--check-peer-deps` option enables strict mode for one run and
+overrides this setting. The guided menu asks about it immediately after the
+package-skip prompt. The menu also provides a `Check peer dependencies` task,
+which checks the current dependency set without changing files.
+
+Candidate checks are sequential. If a candidate fails, older candidates for
+that same package can be tried. The updater does not globally backtrack to
+change an earlier package after a later package fails compatibility.
 
 ## Technologies it uses
 
 ### TypeScript
 
 The source is written in TypeScript. That gives the public library API clear types and catches many mistakes before the package is built.
-
-### Node.js 22+
 
 The package runs on modern Node.js, using Node's file-system, process, and child-process APIs. It uses native ESM modules and publishes both ESM and CommonJS-compatible entry points.
 
@@ -164,8 +295,8 @@ The CLI also uses distinct exit codes: `0` for success, `1` for operational erro
 ## Development commands
 
 ```bash
-npm test          # lint, typecheck, and run Jest
-npm run build     # typecheck and create publishable bundles
-npm run lint      # run ESLint
-npm run check-types
+npm test            # lint, typecheck, and run Jest
+npm run lint        # run ESLint
+npm run check-types # run tsc --no-emit to check for TS errors
+npm run build       # typecheck and create publishable bundles
 ```

@@ -1,6 +1,7 @@
-import { UpdateLevel } from "./cli"
+import type { UpdateLevel } from "./cli"
+import type { VulnerabilitySeverity } from "./audit"
 
-export interface RenovatePackageRule {
+export interface DependencyRule {
   enabled?: boolean
   allowedVersions?: string
   ignoreUnstable?: boolean
@@ -14,17 +15,29 @@ export interface RenovatePackageRule {
   [key: string]: unknown
 }
 
-export interface RenovateConfig {
+export interface DependencyConfig {
   ignoreDeps?: string[]
   ignoreUnstable?: boolean
   minimumReleaseAge?: string | number | false
-  minimumReleaseAgeBehaviour?: "timestamp-required" | "timestamp-optional"
-  packageRules?: RenovatePackageRule[]
+  minimumReleaseAgeBehavior?: "timestamp-required" | "timestamp-optional"
+  packageRules?: DependencyRule[]
   respectLatest?: boolean
   updatePinnedDependencies?: boolean
   vulnerabilityAlerts?: {
     enabled?: boolean
     vulnerabilityFixStrategy?: "lowest" | "highest"
+  }
+  audit?: {
+    minSeverity?: VulnerabilitySeverity
+    showDepChain?: boolean
+    vulnerabilityFixStrategy?: "lowest" | "highest"
+  }
+  peerDependencies?: {
+    strategy?: "ignore" | "strict"
+  }
+  mandatoryUpdates?: {
+    level?: UpdateLevel
+    minSeverity?: VulnerabilitySeverity
   }
   [key: string]: unknown
 }

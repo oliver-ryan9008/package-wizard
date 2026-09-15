@@ -1,9 +1,11 @@
 import { cancel, intro, isCancel, select, text } from "@clack/prompts"
 import {
   promptForApply,
+  promptForAcknowledge,
   promptForCommand,
   shellCompletionOptions
 } from "./cli-menu"
+import { readDependencyConfigWithSource } from "./utils/file-utils"
 import { CliCommand } from "./types"
 import { aboutHelp, generalHelpBanner } from "./logging-utils/help-options"
 import { generalLogger, infoLogger } from "./logging-utils/logger"
@@ -27,7 +29,13 @@ jest.mock("./logging-utils/logger", () => ({
   infoLogger: jest.fn()
 }))
 
+jest.mock("./utils/file-utils", () => ({
+  readDependencyConfigWithSource: jest.fn()
+}))
+
 describe("cli-menu", () => {
+  const stripAnsi = (value: string): string =>
+    value.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g"), "")
   const mockedCancel = cancel as jest.MockedFunction<typeof cancel>
   const mockedIntro = intro as jest.MockedFunction<typeof intro>
   const mockedIsCancel = isCancel as jest.MockedFunction<typeof isCancel>
@@ -41,11 +49,15 @@ describe("cli-menu", () => {
     typeof generalLogger
   >
   const mockedInfoLogger = infoLogger as jest.MockedFunction<typeof infoLogger>
+  const mockedReadDependencyConfig = readDependencyConfigWithSource as jest.MockedFunction<
+    typeof readDependencyConfigWithSource
+  >
 
   beforeEach(() => {
     jest.clearAllMocks()
     mockedIsCancel.mockReturnValue(false)
     mockedText.mockResolvedValue("")
+    mockedReadDependencyConfig.mockResolvedValue(null)
   })
 
   it("starts with preview-first task selection and update scope", async () => {
@@ -87,8 +99,86 @@ describe("cli-menu", () => {
     })
     expect(mockedInfoLogger).toHaveBeenCalled()
     expect(mockedGeneralLogger).toHaveBeenCalledWith(
-      "Preview first. Changes will only be applied after review."
+      "Preview first."
     )
+  })
+
+  it("uses configured global update scope before showing nested options", async () => {
+    mockedReadDependencyConfig.mockResolvedValue({
+      config: {
+        packageRules: [
+          { enabled: true, matchUpdateTypes: ["patch", "minor"] }
+        ]
+      },
+      source: "package.wizard.ts"
+    })
+    mockedSelect
+      .mockResolvedValueOnce(CliCommand.Update)
+      .mockResolvedValueOnce("minor")
+
+    await expect(promptForCommand()).resolves.toEqual([
+      CliCommand.Update,
+      "--level",
+      "minor",
+      "--cwd",
+      process.cwd()
+    ])
+
+    expect(mockedReadDependencyConfig).toHaveBeenCalledWith(process.cwd())
+    expect(mockedSelect).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        initialValue: "minor",
+        options: expect.arrayContaining([
+          expect.objectContaining({
+            value: "minor",
+            label: "Minor and patch updates (Configured by package.wizard.ts)"
+          })
+        ])
+      })
+    )
+  })
+
+  it("offers peer dependency evaluation after skipped packages", async () => {
+    mockedSelect
+      .mockResolvedValueOnce(CliCommand.Update)
+      .mockResolvedValueOnce("minor")
+      .mockResolvedValueOnce("yes")
+
+    await expect(promptForCommand()).resolves.toEqual([
+      CliCommand.Update,
+      "--level",
+      "minor",
+      "--check-peer-deps",
+      "--cwd",
+      process.cwd()
+    ])
+
+    expect(mockedSelect).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        options: expect.arrayContaining([
+          expect.objectContaining({ value: "yes", label: "Yes" })
+        ])
+      })
+    )
+  })
+
+  it("reuses configuration after returning to the main menu", async () => {
+    mockedSelect
+      .mockResolvedValueOnce("help")
+      .mockResolvedValueOnce(CliCommand.Update)
+      .mockResolvedValueOnce("minor")
+
+    await expect(promptForCommand()).resolves.toEqual([
+      CliCommand.Update,
+      "--level",
+      "minor",
+      "--cwd",
+      process.cwd()
+    ])
+
+    expect(mockedReadDependencyConfig).toHaveBeenCalledTimes(1)
   })
 
   it("reports a missing package.json before showing the menu", async () => {
@@ -124,6 +214,82 @@ describe("cli-menu", () => {
     ])
   })
 
+  it("uses configured audit defaults and identifies their source", async () => {
+    mockedReadDependencyConfig.mockResolvedValue({
+      config: {
+        audit: {
+          minSeverity: "moderate",
+          showDepChain: true
+        }
+      },
+      source: "package.wizard.ts"
+    })
+    mockedSelect
+      .mockResolvedValueOnce(CliCommand.Audit)
+      .mockResolvedValueOnce("moderate")
+      .mockResolvedValueOnce(true)
+
+    await expect(promptForCommand()).resolves.toEqual([
+      CliCommand.Audit,
+      "--min-severity",
+      "moderate",
+      "--show-dep-chain",
+      "--cwd",
+      process.cwd()
+    ])
+
+    expect(mockedSelect).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        initialValue: "moderate",
+        options: expect.arrayContaining([
+          expect.objectContaining({
+            value: "moderate",
+            label: "Moderate and above (Configured by package.wizard.ts)"
+          })
+        ])
+      })
+    )
+    expect(mockedSelect).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        initialValue: true,
+        options: expect.arrayContaining([
+          expect.objectContaining({
+            value: true,
+            label: "Yes (Configured by package.wizard.ts)"
+          })
+        ])
+      })
+    )
+  })
+
+  it("identifies configured false chain visibility", async () => {
+    mockedReadDependencyConfig.mockResolvedValue({
+      config: { audit: { showDepChain: false } },
+      source: "package.wizard.ts"
+    })
+    mockedSelect
+      .mockResolvedValueOnce(CliCommand.Audit)
+      .mockResolvedValueOnce("high")
+      .mockResolvedValueOnce(false)
+
+    await promptForCommand()
+
+    expect(mockedSelect).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        initialValue: false,
+        options: expect.arrayContaining([
+          expect.objectContaining({
+            value: false,
+            label: "No (Configured by package.wizard.ts)"
+          })
+        ])
+      })
+    )
+  })
+
   it("keeps policy checks read-only and makes audit optional", async () => {
     mockedSelect
       .mockResolvedValueOnce(CliCommand.Check)
@@ -137,6 +303,12 @@ describe("cli-menu", () => {
       "--cwd",
       process.cwd()
     ])
+  })
+
+  it("waits for acknowledgement before returning from a check", async () => {
+    mockedSelect.mockResolvedValueOnce(true)
+
+    await expect(promptForAcknowledge()).resolves.toBe(true)
   })
 
   it("offers pin-current behavior without unnecessary update scope", async () => {
@@ -196,7 +368,21 @@ describe("cli-menu", () => {
 
     await expect(promptForCommand()).resolves.toBeNull()
 
-    expect(mockedCancel).toHaveBeenCalledWith("Operation cancelled.")
+    expect(mockedCancel).toHaveBeenCalledWith("Thanks for using Package Wizard! Goodbye.")
+  })
+
+  it("returns to the main menu when a nested prompt is cancelled", async () => {
+    mockedSelect
+      .mockResolvedValueOnce(CliCommand.Update)
+      .mockResolvedValueOnce(Symbol("cancel") as never)
+      .mockResolvedValueOnce("exit")
+    mockedIsCancel.mockReturnValueOnce(false).mockReturnValueOnce(true).mockReturnValue(false)
+
+    await expect(promptForCommand()).resolves.toBeNull()
+
+    const message = mockedCancel.mock.calls[0]?.[0] as string
+    expect(stripAnsi(message)).toBe("Returning to the main menu.")
+    expect(mockedSelect).toHaveBeenCalledTimes(3)
   })
 
   it("defaults to keeping a preview and requires a deliberate apply choice", async () => {
@@ -210,7 +396,7 @@ describe("cli-menu", () => {
         options: [
           {
             value: false,
-            label: "Keep preview (Default)",
+            label: "Close preview (Default)",
             hint: "No files change."
           },
           {
@@ -250,13 +436,27 @@ describe("cli-menu", () => {
     expect(mockedSelect).toHaveBeenCalledTimes(3)
   })
 
+  it("logs goodbye when the user chooses exit", async () => {
+    mockedSelect.mockResolvedValueOnce("exit")
+
+    await expect(promptForCommand()).resolves.toBeNull()
+
+    expect(mockedCancel).toHaveBeenCalledWith(
+      "Thanks for using Package Wizard! Goodbye."
+    )
+  })
+
   it("does not apply when the confirmation prompt is cancelled", async () => {
     mockedSelect.mockResolvedValue(Symbol("cancel") as never)
     mockedIsCancel.mockReturnValue(true)
 
     await expect(promptForApply(CliCommand.Audit, 1)).resolves.toBeNull()
 
-    expect(mockedCancel).toHaveBeenCalledWith("Changes were not applied.")
+    const message = mockedCancel.mock.calls[0]?.[0] as string
+    expect(stripAnsi(message)).toBe(
+      "Operation cancelled. No changes applied. Returning to the main menu."
+    )
+    expect(message).not.toBe("Returning to the main menu.")
   })
 
   it("publishes supported shell names for completion help", () => {

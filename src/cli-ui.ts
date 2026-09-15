@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from "node:fs"
-import path from "node:path"
 import semver from "semver"
+import path from "node:path"
+import { styleText } from "node:util"
 import { getCommandDefinition } from "./cli-definition"
 import {
   CliCommand,
@@ -16,6 +16,9 @@ import {
   VULNERABILITY_SEVERITY_RANK
 } from "./types"
 import { getUpdateType } from "./utils/generic-utils"
+import { getInstallCommand } from "./utils/package-manager"
+
+export { getInstallCommand }
 import {
   errorBanner,
   errorLogger,
@@ -39,16 +42,7 @@ const pluralize = (count: number, singular: string, plural = `${singular}s`) =>
 
 const displayTargetPath = (cwd?: string): string => {
   const packageJsonPath = path.join(cwd ?? process.cwd(), "package.json")
-  const homeDirectory = process.env.HOME
-
-  if (!homeDirectory) {
-    return packageJsonPath
-  }
-
-  const relativePath = path.relative(homeDirectory, packageJsonPath)
-  return relativePath && !relativePath.startsWith("..")
-    ? `~/${relativePath}`
-    : packageJsonPath
+  return `${path.basename(path.dirname(packageJsonPath))}/${path.basename(packageJsonPath)}`
 }
 
 const updateKind = (change: PackageChange): string => {
@@ -86,7 +80,7 @@ const printChanges = (changes: readonly PackageChange[]): void => {
 
 const collectSkippedUpdates = (result: UpdateResult): SkipInfo[] => [
   ...result.skipped,
-  ...result.renovateExcluded,
+  ...result.configExcluded,
   ...(result.releaseAgeWarnings ?? []),
   ...(result.releaseAgeErrors ?? [])
 ]
@@ -114,46 +108,6 @@ const printSkippedUpdates = (result: UpdateResult, verbose: boolean): void => {
   )
 }
 
-const detectPackageManager = (cwd?: string): string => {
-  const targetDirectory = cwd ?? process.cwd()
-  const packageJsonPath = path.join(targetDirectory, "package.json")
-  let configuredManager: unknown
-
-  try {
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
-      packageManager?: unknown
-    }
-    configuredManager = packageJson.packageManager
-  } catch {
-    configuredManager = undefined
-  }
-
-  if (typeof configuredManager === "string") {
-    if (configuredManager.startsWith("pnpm@")) return "pnpm"
-    if (configuredManager.startsWith("yarn@")) return "yarn"
-    if (configuredManager.startsWith("bun@")) return "bun"
-    if (configuredManager.startsWith("npm@")) return "npm"
-  }
-
-  const lockfiles: ReadonlyArray<[string, string]> = [
-    ["pnpm-lock.yaml", "pnpm"],
-    ["yarn.lock", "yarn"],
-    ["bun.lock", "bun"],
-    ["bun.lockb", "bun"],
-    ["package-lock.json", "npm"],
-    ["npm-shrinkwrap.json", "npm"]
-  ]
-
-  return (
-    lockfiles.find(([lockfile]) =>
-      existsSync(path.join(targetDirectory, lockfile))
-    )?.[1] ?? "npm"
-  )
-}
-
-export const getInstallCommand = (cwd?: string): string =>
-  `${detectPackageManager(cwd)} install`
-
 export const printOperationHeader = (
   version: string,
   command: CliCommand,
@@ -169,7 +123,8 @@ export const printOperationHeader = (
       : "Apply: package.json may change"
     : "Read-only policy check"
 
-  generalLogger(`${definition.label} | ${mode}`)
+  generalLogger(definition.label)
+  generalLogger(`  ${mode}`)
   generalLogger("")
 }
 
@@ -180,9 +135,9 @@ export const printUpdateResult = (
   const skippedCount = collectSkippedUpdates(result).length
   const changeCount = result.updated.length
 
-  infoLogger(
-    `Scan complete: ${pluralize(changeCount, "change")}, ${pluralize(skippedCount, "package")} skipped.`
-  )
+  infoLogger("Scan complete")
+  generalLogger(`  Changes: ${pluralize(changeCount, "change")}`)
+  generalLogger(`  Skipped: ${pluralize(skippedCount, "package")}`)
 
   if (changeCount > 0) {
     generalLogger("")
@@ -212,26 +167,47 @@ export const printUpdateResult = (
   return changeCount
 }
 
-const vulnerabilityLabel = (vulnerability: Vulnerability): string => {
-  const source = vulnerability.isDirect ? "direct" : "indirect"
-  return `[${vulnerability.severity.toUpperCase()}] ${vulnerability.name} (${source})`
+const vulnerabilitySeverityColor = (
+  severity: VulnerabilitySeverity
+): "redBright" | "red" | "yellow" | "cyan" | "gray" => {
+  if (severity === VulnerabilitySeverity.Critical) return "redBright"
+  if (severity === VulnerabilitySeverity.High) return "red"
+  if (severity === VulnerabilitySeverity.Moderate) return "yellow"
+  if (severity === VulnerabilitySeverity.Low) return "cyan"
+  return "gray"
 }
 
-const vulnerabilityDescription = (vulnerability: Vulnerability): string => {
+const vulnerabilityHeading = (vulnerability: Vulnerability): string => {
+  const source = vulnerability.isDirect ? "direct" : "indirect"
+  const severity = styleText(
+    ["bold", vulnerabilitySeverityColor(vulnerability.severity)],
+    `[${vulnerability.severity.toUpperCase()}]`
+  )
+  return `${severity} ${vulnerability.name} (${source})`
+}
+
+const vulnerabilityDetails = (vulnerability: Vulnerability): string => {
   const title = vulnerability.titles[0]
   const fix = vulnerability.fixAvailable
     ? `fix: ${vulnerability.fixAvailable.version}`
     : "fix: unavailable"
-  const titlePrefix = title ? `${title}. ` : ""
+  const titleLine = title ? `  Issue: ${title}` : ""
   const dependencyChain = vulnerability.dependencyChain
-    ? ` Dependency chain: ${vulnerability.dependencyChain
+    ? `  Dependency chain: ${vulnerability.dependencyChain
         .split("\n")
         .map(line => line.trim())
         .filter(Boolean)
         .join(" -> ")}`
     : ""
 
-  return `${titlePrefix}Vulnerable range: ${vulnerability.range}; ${fix}.${dependencyChain}`
+  return [
+    titleLine,
+    `  Vulnerable range: ${vulnerability.range}`,
+    `  ${fix[0]?.toUpperCase()}${fix.slice(1)}`,
+    dependencyChain
+  ]
+    .filter(Boolean)
+    .join("\n")
 }
 
 const printVulnerabilities = (
@@ -255,12 +231,12 @@ const printVulnerabilities = (
   }
 
   generalLogger(
-    formatColumns(
-      vulnerabilities.map(vulnerability => ({
-        label: vulnerabilityLabel(vulnerability),
-        description: vulnerabilityDescription(vulnerability)
-      }))
-    )
+    vulnerabilities
+      .map(
+        vulnerability =>
+          `${vulnerabilityHeading(vulnerability)}\n${vulnerabilityDetails(vulnerability)}`
+      )
+      .join("\n\n")
   )
 }
 
@@ -321,6 +297,17 @@ export const printAuditResult = (
   return changeCount
 }
 
+export const printPeerDependencyCheckResult = (
+  result: { valid: boolean; message?: string }
+): void => {
+  if (result.valid) {
+    successLogger("Peer dependency check passed. No conflicts found.")
+    return
+  }
+  errorLogger("Peer dependency check found conflicts.")
+  if (result.message) generalLogger(result.message)
+}
+
 export const printMandatoryCheckResult = (
   result: MandatoryUpdateCheckResult
 ): void => {
@@ -331,6 +318,7 @@ export const printMandatoryCheckResult = (
     return
   }
 
+  generalLogger("")
   errorLogger("Maintenance check failed.")
   generalLogger(`  ${result.message}`)
 

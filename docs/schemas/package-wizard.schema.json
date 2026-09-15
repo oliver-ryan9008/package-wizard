@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/oliver-ryan9008/package-wizard/main/docs/schemas/package-wizard.schema.json",
+  "title": "Package Wizard configuration",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "ignore": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "defaults": { "$ref": "#/$defs/defaults" },
+    "audit": { "$ref": "#/$defs/audit" },
+    "peerDependencies": { "$ref": "#/$defs/peerDependencies" },
+    "mandatoryUpdates": { "$ref": "#/$defs/mandatoryUpdates" },
+    "packages": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/rule" }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/rule" },
+          {
+            "type": "object",
+            "properties": {
+              "packageName": { "type": "string" },
+              "package": { "type": "string", "deprecated": true }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "audit": {
+      "type": "object",
+      "properties": {
+        "minSeverity": { "enum": ["critical", "high", "moderate", "low", "info"] },
+        "showDepChain": { "type": "boolean" },
+        "vulnerabilityFixStrategy": { "enum": ["lowest", "highest"] }
+      },
+      "additionalProperties": false
+    },
+    "mandatoryUpdates": {
+      "type": "object",
+      "properties": {
+        "level": { "enum": ["all", "patch", "minor", "major"] },
+        "minSeverity": { "enum": ["critical", "high", "moderate", "low", "info"] }
+      },
+      "additionalProperties": false
+    },
+    "peerDependencies": {
+      "description": "Controls peer and Node.js/npm engine compatibility checks during updates.",
+      "type": "object",
+      "properties": {
+        "strategy": {
+          "description": "Use strict npm peer and engine resolution for update candidates.",
+          "enum": ["ignore", "strict"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "defaults": {
+      "allOf": [
+        { "$ref": "#/$defs/rule" },
+        {
+          "not": {
+            "anyOf": [
+              { "required": ["allowedVersions"] },
+              { "required": ["packageName"] },
+              { "required": ["package"] }
+            ]
+          }
+        }
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "properties": {
+        "packageName": { "type": "string" },
+        "package": { "type": "string", "deprecated": true },
+        "enabled": { "type": "boolean" },
+        "allowedVersions": { "type": "string" },
+        "ignoreUnstable": { "type": "boolean" },
+        "respectLatest": { "type": "boolean" },
+        "updatePinnedDependencies": { "type": "boolean" },
+        "minimumReleaseAge": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean", "const": false }
+          ]
+        },
+        "minimumReleaseAgeBehavior": {
+          "enum": ["timestamp-required", "timestamp-optional"]
+        },
+        "enabledUpdateTypes": {
+          "oneOf": [
+            { "enum": ["all", "patch", "minor", "major"] },
+            {
+              "type": "array",
+              "items": { "enum": ["all", "patch", "minor", "major"] }
+            }
+          ]
+        },
+        "disabledUpdateTypes": {
+          "oneOf": [
+            { "enum": ["all", "patch", "minor", "major"] },
+            {
+              "type": "array",
+              "items": { "enum": ["all", "patch", "minor", "major"] }
+            }
+          ]
+        },
+        "matchDepTypes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
