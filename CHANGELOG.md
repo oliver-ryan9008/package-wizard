@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/oliver-ryan9008/package-wizard/compare/v1.4.0...v1.5.0) (2026-09-18)
+
+
+### Features
+
+* add multi-selection of updates to apply ([7f065e7](https://github.com/oliver-ryan9008/package-wizard/commit/7f065e7219811c5e90b302fa63649416f798de28))
+
 # [1.4.0](https://github.com/oliver-ryan9008/package-wizard/compare/v1.3.0...v1.4.0) (2026-09-15)
 
 
