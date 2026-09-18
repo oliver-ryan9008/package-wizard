@@ -488,8 +488,18 @@ export const fixVulnerabilities = async (
   const fixed: VulnerabilityFixChange[] = []
   const skipped: VulnerabilityFixSkip[] = []
   const fixedPackageNames = new Set<string>()
+  const skippedPackageNames = new Set(options.skip ?? [])
 
   for (const vuln of vulnerabilities) {
+    if (
+      skippedPackageNames.has(vuln.name) ||
+      (vuln.fixAvailable !== false &&
+        vuln.fixAvailable.name !== undefined &&
+        skippedPackageNames.has(vuln.fixAvailable.name))
+    ) {
+      skipped.push({ name: vuln.name, reason: "Skipped during interactive selection" })
+      continue
+    }
     if (vuln.fixAvailable === false) {
       skipped.push({
         name: vuln.name,

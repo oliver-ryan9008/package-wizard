@@ -1,10 +1,14 @@
-import { SelectPrompt, wrapTextWithPrefix } from "@clack/core"
+import { MultiSelectPrompt, SelectPrompt, wrapTextWithPrefix } from "@clack/core"
 import {
   cancel,
   formatInstructionFooter,
   intro,
   isCancel,
   limitOptions,
+  MULTISELECT_INSTRUCTIONS,
+  S_CHECKBOX_ACTIVE,
+  S_CHECKBOX_INACTIVE,
+  S_CHECKBOX_SELECTED,
   S_BAR,
   S_BAR_END,
   SELECT_INSTRUCTIONS,
@@ -25,6 +29,8 @@ import { aboutHelp, generalHelpBanner } from "./logging-utils/help-options"
 import { generalLogger, infoLogger } from "./logging-utils/logger"
 import { CliCommand, Shell, UpdateLevel, VulnerabilitySeverity } from "./types"
 import type { DependencyConfig } from "./types"
+import { getUpdateType } from "./utils/generic-utils"
+import semver from "semver"
 
 type MenuAction = CliCommand | "target" | "help" | "back" | "exit"
 type BackAction = "back"
@@ -555,8 +561,8 @@ export const promptForApply = async (
       },
       {
         value: true,
-        label: "Apply changes",
-        hint: "Writes package.json."
+        label: "Select changes to apply",
+        hint: "Choose packages before writing package.json."
       },
       ...(skippedCount > 0
         ? [
@@ -583,6 +589,149 @@ export const promptForApply = async (
   if (selected === "back") return null
 
   return selected as boolean | "details"
+}
+
+type PackageSelection =
+  | string
+  | "select-patch"
+  | "select-minor"
+  | "select-major"
+  | "select-all"
+  | "divider"
+
+const promptForBulkSelection = async (
+  message: string,
+  options: SelectOption<PackageSelection>[],
+  initialValues: PackageSelection[],
+  bulkValues: Set<string>
+): Promise<PackageSelection[] | symbol> => {
+  const selectedPackageValues = new Set(initialValues)
+  const groupForBulkValue = (value: string): PackageSelection[] =>
+    value === "select-all"
+      ? initialValues
+      : initialValues.filter(name => name.startsWith(`${value.replace("select-", "")}:`))
+  const prompt = new MultiSelectPrompt<SelectOption<PackageSelection>>({
+    options,
+    initialValues,
+    render() {
+      const withGuide = settings.withGuide
+      const promptPrefix = `${symbol(this.state)}  `
+      const guidePrefix = `${symbolBar(this.state)}  `
+      const heading = wrapTextWithPrefix(undefined, message, guidePrefix, promptPrefix)
+      const output = `${withGuide ? `${styleText("gray", S_BAR)}\n` : ""}${heading}\n`
+      if (this.state === "submit" || this.state === "cancel") return output
+
+      const prefix = withGuide ? `${styleText("cyan", S_BAR)}  ` : ""
+      const footer = formatInstructionFooter(MULTISELECT_INSTRUCTIONS, withGuide)
+      const rows = limitOptions({
+        output: process.stdout,
+        cursor: this.cursor,
+        options: this.options,
+        columnPadding: prefix.length,
+        rowPadding: output.split("\n").length + footer.length + 1,
+        style: (option, active) => {
+          const group = bulkValues.has(String(option.value))
+            ? groupForBulkValue(String(option.value))
+            : []
+          const selected = group.length > 0
+            ? group.every(value => selectedPackageValues.has(value))
+            : selectedPackageValues.has(option.value)
+          const checkbox = selected ? S_CHECKBOX_SELECTED : S_CHECKBOX_INACTIVE
+          const marker = active ? S_CHECKBOX_ACTIVE : checkbox
+          const label = option.label ?? String(option.value)
+          return option.disabled
+            ? `${styleText("gray", S_CHECKBOX_INACTIVE)} ${styleText("gray", label)}`
+            : `${styleText(selected ? "green" : active ? "cyan" : "dim", marker)} ${label}`
+        }
+      }).join(`\n${prefix}`)
+      return `${output}${prefix}${rows}\n${footer.join("\n")}\n`
+    }
+  })
+
+  prompt.on("key", (key, keyInfo) => {
+    if (keyInfo?.name !== "space" && key !== " ") return
+    const option = prompt.options[prompt.cursor]
+    if (!option || option.disabled) return
+    const value = String(option.value)
+    const group = bulkValues.has(value) ? groupForBulkValue(value) : [option.value]
+    const groupIsSelected = group.every(name => selectedPackageValues.has(name))
+    group.forEach(name => {
+      if (groupIsSelected) selectedPackageValues.delete(name)
+      else selectedPackageValues.add(name)
+    })
+  })
+
+  const result = await prompt.prompt()
+  if (typeof result === "symbol") return result
+  if (result === undefined) return [...selectedPackageValues]
+  return [...selectedPackageValues]
+}
+
+export const promptForPackageSelection = async (
+  command: CliCommand,
+  changes: Array<{ name: string; from: string; to: string }>
+): Promise<string[] | null> => {
+  const names = [...new Set(changes.map(change => change.name))]
+  const packageTypes = new Map<string, string>()
+  for (const change of changes) {
+    const from = semver.coerce(change.from)
+    const to = semver.coerce(change.to)
+    if (from && to) packageTypes.set(change.name, getUpdateType(from, to))
+  }
+
+  const changesByName = new Map(changes.map(change => [change.name, change]))
+  const formatVersion = (value: string): string => {
+    const version = semver.coerce(value)
+    return version ? `v${version.version}` : value
+  }
+
+  const packageOptions = names.map(name => ({
+    value: `${packageTypes.get(name) ?? "other"}:${name}` as PackageSelection,
+    label: `${name} ${formatVersion(changesByName.get(name)?.from ?? "")} -> ${formatVersion(changesByName.get(name)?.to ?? "")}`
+  }))
+  const packageNamesByOption = new Map(packageOptions.map(option => [
+    option.value,
+    option.label.slice(0, option.label.indexOf(" "))
+  ]))
+  let selectedValues = packageOptions.map(option => option.value)
+  while (true) {
+    const selected = await promptForBulkSelection(
+      `Choose ${command === CliCommand.Audit ? "audit fixes" : "package updates"} to apply`,
+      [
+        { value: "select-patch", label: "Select Patch" },
+        { value: "select-minor", label: "Select Minor" },
+        { value: "select-major", label: "Select Major" },
+        { value: "select-all", label: "Select All" },
+        { value: "divider", label: "──────────────", disabled: true },
+        ...packageOptions
+      ],
+      selectedValues,
+      new Set(["select-patch", "select-minor", "select-major", "select-all"])
+    )
+
+    if (isPromptCancelled(selected)) {
+      returnToMainMenu("Operation cancelled. No changes applied.")
+      return null
+    }
+
+    const values = selected as PackageSelection[]
+    selectedValues = values.filter(value => packageNamesByOption.has(value))
+    const selectedNames = new Set(selectedValues
+      .map(value => packageNamesByOption.get(value) as string))
+
+    const action = await selectWithDiamond({
+      message: "Ready to apply selected packages?",
+      initialValue: "apply",
+      options: [
+        { value: "apply", label: "Apply" },
+        { value: "cancel", label: "Cancel" },
+        backOption
+      ]
+    })
+    if (isPromptCancelled(action) || action === "cancel") return null
+    if (action === "back") continue
+    return [...selectedNames]
+  }
 }
 
 export const promptForAcknowledge = async (): Promise<boolean> => {

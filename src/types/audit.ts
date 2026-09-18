@@ -105,6 +105,7 @@ export interface VulnerabilityFixSkip {
 export interface VulnerabilityFixOptions {
   cwd?: string
   minSeverity?: VulnerabilitySeverity
+  skip?: string[]
   dryRun?: boolean
   quiet?: boolean
   vulnerabilityFixStrategy?: "lowest" | "highest"

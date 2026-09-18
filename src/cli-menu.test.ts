@@ -1,8 +1,9 @@
-import { cancel, intro, isCancel, select, text } from "@clack/prompts"
+import { cancel, intro, isCancel, multiselect, select, text } from "@clack/prompts"
 import {
   promptForApply,
   promptForAcknowledge,
   promptForCommand,
+  promptForPackageSelection,
   shellCompletionOptions
 } from "./cli-menu"
 import { readDependencyConfigWithSource } from "./utils/file-utils"
@@ -16,6 +17,7 @@ jest.mock("@clack/prompts", () => ({
   intro: jest.fn(),
   isCancel: jest.fn(),
   select: jest.fn(),
+  multiselect: jest.fn(),
   text: jest.fn()
 }))
 
@@ -40,6 +42,7 @@ describe("cli-menu", () => {
   const mockedIntro = intro as jest.MockedFunction<typeof intro>
   const mockedIsCancel = isCancel as jest.MockedFunction<typeof isCancel>
   const mockedSelect = select as jest.MockedFunction<typeof select>
+  const mockedMultiselect = multiselect as jest.MockedFunction<typeof multiselect>
   const mockedText = text as jest.MockedFunction<typeof text>
   const mockedAboutHelp = aboutHelp as jest.MockedFunction<typeof aboutHelp>
   const mockedGeneralHelpBanner = generalHelpBanner as jest.MockedFunction<
@@ -57,6 +60,7 @@ describe("cli-menu", () => {
     jest.clearAllMocks()
     mockedIsCancel.mockReturnValue(false)
     mockedText.mockResolvedValue("")
+    mockedMultiselect.mockResolvedValue([])
     mockedReadDependencyConfig.mockResolvedValue(null)
   })
 
@@ -401,8 +405,8 @@ describe("cli-menu", () => {
           },
           {
             value: true,
-            label: "Apply changes",
-            hint: "Writes package.json."
+            label: "Select changes to apply",
+            hint: "Choose packages before writing package.json."
           },
           {
             value: "details",
@@ -457,6 +461,58 @@ describe("cli-menu", () => {
       "Operation cancelled. No changes applied. Returning to the main menu."
     )
     expect(message).not.toBe("Returning to the main menu.")
+  })
+
+  it("selects packages and toggles a bulk update level before applying", async () => {
+    mockedMultiselect.mockResolvedValueOnce([
+      "select-patch",
+      "patch:react",
+      "minor:typescript"
+    ])
+    mockedSelect.mockResolvedValueOnce("apply")
+
+    await expect(promptForPackageSelection(CliCommand.Update, [
+      { name: "react", from: "^18.0.0", to: "^18.0.1" },
+      { name: "typescript", from: "^5.0.0", to: "^5.1.0" }
+    ])).resolves.toEqual(expect.arrayContaining(["react", "typescript"]))
+
+    expect(mockedMultiselect).toHaveBeenCalledWith(expect.objectContaining({
+      initialValues: ["patch:react", "minor:typescript"],
+      options: expect.arrayContaining([
+        { value: "select-patch", label: "Select Patch" },
+        { value: "select-minor", label: "Select Minor" },
+        { value: "select-major", label: "Select Major" },
+        { value: "select-all", label: "Select All" },
+        { value: "divider", label: "──────────────", disabled: true },
+        {
+          value: "patch:react",
+          label: "react v18.0.0 -> v18.0.1"
+        }
+      ])
+    }))
+    expect(mockedSelect).toHaveBeenLastCalledWith(expect.objectContaining({
+      options: [
+        { value: "apply", label: "Apply" },
+        { value: "cancel", label: "Cancel" },
+        { value: "back", label: "← Go back" }
+      ]
+    }))
+  })
+
+  it("returns to package selection when Go back is chosen", async () => {
+    mockedMultiselect
+      .mockResolvedValueOnce(["patch:react"])
+      .mockResolvedValueOnce(["minor:typescript"])
+    mockedSelect
+      .mockResolvedValueOnce("back")
+      .mockResolvedValueOnce("apply")
+
+    await expect(promptForPackageSelection(CliCommand.Update, [
+      { name: "react", from: "1.0.0", to: "1.0.1" },
+      { name: "typescript", from: "5.0.0", to: "5.1.0" }
+    ])).resolves.toEqual(expect.arrayContaining(["react", "typescript"]))
+
+    expect(mockedMultiselect).toHaveBeenCalledTimes(2)
   })
 
   it("publishes supported shell names for completion help", () => {

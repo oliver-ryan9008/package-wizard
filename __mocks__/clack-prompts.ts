@@ -12,6 +12,7 @@ const createSpinner = () => ({
 
 export const spinner: jest.Mock = jest.fn(createSpinner)
 export const select: jest.Mock = jest.fn()
+export const multiselect: jest.Mock = jest.fn()
 export const text: jest.Mock = jest.fn()
 export const cancel: jest.Mock = jest.fn()
 export const intro: jest.Mock = jest.fn()
