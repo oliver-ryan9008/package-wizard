@@ -28,6 +28,7 @@ import { aboutHelp, checkForHelpOptions } from "../logging-utils/help-options"
 import {
   promptForAcknowledge,
   promptForApply,
+  promptForPackageSelection,
   promptForCommand,
   type InteractiveConfigCache
 } from "../cli-menu"
@@ -67,6 +68,7 @@ export const runAudit = async (
     ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
     minSeverity,
     dryRun: options.dryRun ?? true,
+    ...(options.skip && options.skip.length > 0 ? { skip: options.skip } : {}),
     ...(options.json ? { quiet: true } : {}),
     ...(options.configLog === undefined ? {} : { configLog: options.configLog }),
     ...(options.dependencyConfig === undefined ? {} : { dependencyConfig: config })
@@ -183,6 +185,7 @@ const maybeApplyInteractivePreview = async (
   changeCount: number,
   skippedCount: number,
   showSkippedReasons: () => void,
+  changes: Array<{ name: string; from: string; to: string }>,
   apply: (nextOptions: CliOptions) => Promise<void>
 ): Promise<void> => {
   if (!interactive || options.json || !options.dryRun || changeCount === 0) return
@@ -191,6 +194,23 @@ const maybeApplyInteractivePreview = async (
     if (action === "details") {
       showSkippedReasons()
       continue
+    }
+    if (action === true) {
+      const selectedPackages = await promptForPackageSelection(command, changes)
+      if (selectedPackages === null) return
+      const selected = new Set(selectedPackages)
+      const skipped = changes
+        .map(change => change.name)
+        .filter(name => !selected.has(name))
+      infoLogger("Rechecking before apply...")
+      await apply({
+        ...options,
+        skip: [...new Set([...(options.skip ?? []), ...skipped])],
+        apply: true,
+        dryRun: false,
+        fix: false
+      })
+      return
     }
     if (!action) return
     infoLogger("Rechecking before apply...")
@@ -264,13 +284,13 @@ export const run = async (
       }
       if (command === CliCommand.Audit) {
         const result = await runAudit(options, dependencies)
-        await maybeApplyInteractivePreview(interactive, command, options, result.fixed.length, result.skipped.length, () => printAuditResult(result, { ...options, verbose: true }), async applyOptions => { await runAudit(applyOptions, dependencies) })
+        await maybeApplyInteractivePreview(interactive, command, options, result.fixed.length, result.skipped.length, () => printAuditResult(result, { ...options, verbose: true }), result.fixed, async applyOptions => { await runAudit(applyOptions, dependencies) })
         if (!interactive) return
         if (!(await promptForAcknowledge())) continue
         continue
       }
       const result = await runUpdate(options, dependencies)
-      await maybeApplyInteractivePreview(interactive, command, options, result.updated.length, result.skipped.length + result.configExcluded.length + (result.releaseAgeWarnings?.length ?? 0) + (result.releaseAgeErrors?.length ?? 0), () => printUpdateResult(result, { ...options, verbose: true }), async applyOptions => { await runUpdate(applyOptions, dependencies) })
+      await maybeApplyInteractivePreview(interactive, command, options, result.updated.length, result.skipped.length + result.configExcluded.length + (result.releaseAgeWarnings?.length ?? 0) + (result.releaseAgeErrors?.length ?? 0), () => printUpdateResult(result, { ...options, verbose: true }), result.updated, async applyOptions => { await runUpdate(applyOptions, dependencies) })
       if (!interactive) return
     }
   } catch (error) {

@@ -33,6 +33,7 @@ import {
 import {
   promptForAcknowledge,
   promptForApply,
+  promptForPackageSelection,
   promptForCommand
 } from "./cli-menu"
 import {
@@ -70,6 +71,7 @@ jest.mock("./logging-utils/logger", () => ({
 jest.mock("./cli-menu", () => ({
   promptForAcknowledge: jest.fn(),
   promptForApply: jest.fn(),
+  promptForPackageSelection: jest.fn(),
   promptForCommand: jest.fn()
 }))
 
@@ -110,6 +112,10 @@ const mockedPromptForApply = promptForApply as jest.MockedFunction<
 const mockedPromptForAcknowledge = promptForAcknowledge as jest.MockedFunction<
   typeof promptForAcknowledge
 >
+const mockedPromptForPackageSelection =
+  promptForPackageSelection as jest.MockedFunction<
+    typeof promptForPackageSelection
+  >
 const mockedPromptForCommand = promptForCommand as jest.MockedFunction<
   typeof promptForCommand
 >
@@ -182,6 +188,7 @@ describe("cli", () => {
     mockedCheckForHelpOptions.mockReturnValue(false)
     mockedPromptForCommand.mockResolvedValue([CliCommand.Update])
     mockedPromptForApply.mockResolvedValue(false)
+    mockedPromptForPackageSelection.mockResolvedValue(["react"])
     mockedPromptForAcknowledge.mockResolvedValue(true)
     mockedGetDependencyChain.mockResolvedValue("root -> indirect-package")
     mockedUpdatePackageJsonDependencies.mockResolvedValue(updateResult)
